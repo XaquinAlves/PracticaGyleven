@@ -1,0 +1,172 @@
+import { useMemo, useState } from "react";
+import Cookies from "js-cookie";
+import MediaModdel, {type DirectoryProps } from "./MediaModel";
+
+interface MediaUploadFormProps {
+    onUploadSuccess?: () => void;
+}
+
+function isDirectory(entry: DirectoryProps | { type: string }): entry is DirectoryProps {
+    return entry.type === "directory";
+}
+
+function buildDirectoryPaths(root?: DirectoryProps): string[] {
+    if (!root) return [""];
+
+    const paths = new Set<string>();
+    paths.add("");
+
+    const collect = (node: DirectoryProps, basePath: string) => {
+        const children = (node.children ?? []).filter(isDirectory);
+        for (const child of children) {
+            const childPath = basePath ? `${basePath}/${child.name}` : child.name;
+            paths.add(childPath);
+            collect(child, childPath);
+        }
+    };
+
+    collect(root, "");
+    return Array.from(paths);
+}
+
+export default function MediaUploadForm({ onUploadSuccess }: MediaUploadFormProps) {
+    const [files, setFiles] = useState<FileList | null>(null);
+    const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">(
+        "idle",
+    );
+    const [selectedPath, setSelectedPath] = useState("");
+    const [newDirectory, setNewDirectory] = useState("");
+    const [message, setMessage] = useState<string>("");
+
+    const directories = MediaModdel.directories;
+    const basePaths = useMemo(() => buildDirectoryPaths(directories), [directories]);
+    const availablePaths = useMemo(() => {
+        const set = new Set(basePaths);
+        if (selectedPath && !set.has(selectedPath)) {
+            set.add(selectedPath);
+        }
+        return Array.from(set);
+    }, [basePaths, selectedPath]);
+
+    const selectedLabel = selectedPath ? `/${selectedPath}` : "/";
+
+    const handleCreateDirectory = () => {
+        const trimmed = newDirectory.trim();
+        if (!trimmed) return;
+
+        const sanitized = trimmed.replace(/[\\/]+/g, "-");
+        const createdPath = selectedPath
+            ? `${selectedPath}/${sanitized}`
+            : sanitized;
+        setSelectedPath(createdPath);
+        setNewDirectory("");
+        setMessage(`Se usará la carpeta ${createdPath}`);
+    };
+
+    const upload = async () => {
+        if (!files?.length) {
+            setMessage("Selecciona al menos un archivo.");
+            return;
+        }
+
+        const form = new FormData();
+        Array.from(files).forEach((file) => form.append("files", file));
+        form.append("target_dir", selectedPath);
+
+        setStatus("sending");
+        setMessage("");
+        try {
+            const response = await fetch(
+                "http://localhost:8000/registros/media/upload/",
+                {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": Cookies.get("csrftoken") || "",
+                    },
+                    body: form,
+                    credentials: "include",
+                },
+            );
+
+            if (!response.ok) {
+                throw new Error("La subida devolviÃ³ " + response.status);
+            }
+
+            const saved = await response.json();
+            setStatus("done");
+            setFiles(null);
+            setMessage(`Subidos ${saved.length} archivos en ${selectedLabel}`);
+            onUploadSuccess?.();
+        } catch (error) {
+            console.error(error);
+            setStatus("error");
+            setMessage("Hubo un error al subir los archivos.");
+        }
+    };
+
+    return (
+        <div className="card mt-5 ms-5">
+            <h2 className="card-header text-center">Subir a MEDIA</h2>
+            <div className="card-body">
+                <div className="mb-3">
+                    <label className="form-label">Seleccionar carpeta</label>
+                    <select
+                        className="form-select"
+                        value={selectedPath}
+                        onChange={(event) => setSelectedPath(event.target.value)}
+                    >
+                        {availablePaths.map((path) => (
+                            <option key={path} value={path}>
+                                {path === "" ? "/" : `/${path}`}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="input-group mb-3">
+                    <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Nueva carpeta"
+                        value={newDirectory}
+                        onChange={(event) => setNewDirectory(event.target.value)}
+                    />
+                    <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={handleCreateDirectory}
+                    >
+                        Crear subcarpeta
+                    </button>
+                </div>
+                <p className="small text-muted">
+                    Carpeta activa: <strong>{selectedLabel}</strong>
+                </p>
+                <div className="mb-3">
+                    <label className="form-label">Archivos</label>
+                    <input
+                        type="file"
+                        className="form-control"
+                        multiple
+                        onChange={(event) => setFiles(event.target.files)}
+                    />
+                </div>
+                <button
+                    className="btn btn-primary"
+                    onClick={upload}
+                    disabled={status === "sending" || !files?.length}
+                >
+                    {status === "sending" ? "Subiendo..." : "Subir archivos"}
+                </button>
+                {message && (
+                    <p
+                        className={`mt-3 ${
+                            status === "error" ? "text-danger" : "text-success"
+                        }`}
+                    >
+                        {message}
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}
