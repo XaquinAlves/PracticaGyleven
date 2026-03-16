@@ -1,16 +1,19 @@
 import Sidebar from "~/common/Sidebar";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import MediaModdel from "./MediaModel";
 import DirectoryComponent from "./DirectoryComponent";
 import MediaUploadForm from "./MediaUploadForm";
 import MediaModel from "./MediaModel";
 
 export default function MediaView() {
-    const [cargando, setCargando] = useState<boolean>(
-        MediaModdel.directories === undefined,
-    );
+
     const [importantPaths, setImportantPaths] = useState<Set<string>>(
-        () => new Set(),
+        new Set()
+    );
+
+    const [cargando, setCargando] = useState<boolean>(
+        MediaModdel.directories === undefined ||
+        importantPaths.size === 0
     );
 
     if (cargando) {
