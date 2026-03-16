@@ -87,6 +87,23 @@ def _persist_invoices(df: pd.DataFrame):
     combined.to_csv(invoices_path, index=False)
     logger.info("Invoices table persisted at %s (%d rows)", invoices_path, len(combined))
 
+
+def _save_pdf_to_facturas(uploaded_file, destination_root: str) -> str:
+    os.makedirs(destination_root, exist_ok=True)
+    name_root, ext = os.path.splitext(uploaded_file.name)
+    target_path = os.path.join(destination_root, uploaded_file.name)
+    counter = 1
+    while os.path.exists(target_path):
+        target_path = os.path.join(
+            destination_root,
+            f"{name_root}_{counter}{ext}",
+        )
+        counter += 1
+    with open(target_path, "wb") as out_file:
+        for chunk in uploaded_file.chunks():
+            out_file.write(chunk)
+    return target_path
+
 def _build_media_tree(base_path: Path) -> list[dict[str, Any]]:
     entries = []
     for entry in sorted(base_path.iterdir(), key=lambda p: p.name):
@@ -325,10 +342,15 @@ def leer_factura_pdf(request):
             {"error": "Falta el archivo PDF o el formato no es válido"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    facturas_dir = os.path.join(settings.MEDIA_ROOT, "Facturas")
     invoice_rows = []
     for uploaded_file in valid_files:
+        saved_path = None
+        relative_path = None
         try:
-            reader = PdfReader(uploaded_file)
+            saved_path = _save_pdf_to_facturas(uploaded_file, facturas_dir)
+            relative_path = os.path.relpath(saved_path, settings.MEDIA_ROOT).replace("\\", "/")
+            reader = PdfReader(saved_path)
             page_text = "\n".join(page.extract_text() or "" for page in reader.pages)
             metadata = _extract_invoice_metadata(page_text)
             invoice_rows.append(
@@ -339,6 +361,7 @@ def leer_factura_pdf(request):
                     "invoice_date": metadata["invoice_date"],
                     "total": metadata["total"],
                     "extracted_at": datetime.utcnow().isoformat(),
+                    "stored_path": relative_path,
                 }
             )
         except Exception as exc:
@@ -347,6 +370,7 @@ def leer_factura_pdf(request):
                 {
                     "name": uploaded_file.name,
                     "error": str(exc),
+                    "stored_path": relative_path,
                 }
             )
 

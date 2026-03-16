@@ -1,3 +1,4 @@
-name,page_count,invoice_number,invoice_date,total,extracted_at
-invoice-001.pdf,1,INV-2026,26-03-10,1.250.00,2026-03-13T13:15:45.597300
-invoice-002.pdf,1,INV-2026,26-03-12,2.425.50,2026-03-13T13:18:26.345158
+name,page_count,invoice_number,invoice_date,total,extracted_at,stored_path
+invoice-001.pdf,1,INV-2026,26-03-10,1.250.00,2026-03-13T13:15:45.597300,
+invoice-002.pdf,1,INV-2026,26-03-12,2.425.50,2026-03-13T13:18:26.345158,
+invoice-001.pdf,1,INV-2026,26-03-10,1250.00,2026-03-16T10:30:08.662563,Facturas/invoice-001_1.pdf
