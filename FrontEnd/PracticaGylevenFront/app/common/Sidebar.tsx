@@ -61,6 +61,14 @@ export default function Sidebar() {
                         Directorios y ficheros
                     </Link>
                 </li>
+                <li>
+                    <Link to="/important-files" className="nav-link text-white">
+                        <svg className="bi me-2" width="16" height="16">
+                            <use xlinkHref="#speedometer2"></use>
+                        </svg>
+                        Archivos importantes
+                    </Link>
+                </li>
             </ul>
             <hr />
             <div className="dropdown">

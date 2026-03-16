@@ -20,5 +20,6 @@ export default [
         route("/settings", "./settings/SettingsView.tsx"),
         route("/invoices", "./imports/invoices/InvoicesView.tsx"),
         route("/media", "./media/MediaView.tsx"),
+        route("/important-files", "./media/ImportantFilesView.tsx")
     ]),
 ] satisfies RouteConfig;

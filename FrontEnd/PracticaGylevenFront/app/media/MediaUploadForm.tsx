@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import Cookies from "js-cookie";
-import MediaModdel, {type DirectoryProps } from "./MediaModel";
+import MediaModel, {type DirectoryProps } from "./MediaModel";
 
 interface MediaUploadFormProps {
     onUploadSuccess?: () => void;
@@ -38,7 +38,7 @@ export default function MediaUploadForm({ onUploadSuccess }: MediaUploadFormProp
     const [newDirectory, setNewDirectory] = useState("");
     const [message, setMessage] = useState<string>("");
 
-    const directories = MediaModdel.directories;
+    const directories = MediaModel.directories;
     const basePaths = useMemo(() => buildDirectoryPaths(directories), [directories]);
     const availablePaths = useMemo(() => {
         const set = new Set(basePaths);

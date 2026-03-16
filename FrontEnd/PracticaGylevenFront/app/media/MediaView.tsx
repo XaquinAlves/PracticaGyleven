@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import MediaModdel from "./MediaModel";
 import DirectoryComponent from "./DirectoryComponent";
 import MediaUploadForm from "./MediaUploadForm";
-import Cookies from "js-cookie";
 
 export default function MediaView() {
     const [cargando, setCargando] = useState<boolean>(
@@ -26,34 +25,19 @@ export default function MediaView() {
 
         const loadImportantPaths = async () => {
             try {
-                const response = await fetch(
-                    "http://localhost:8000/registros/media/important-files/",
-                    {
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        credentials: "include",
-                    },
-                );
-
-                if (!response.ok) {
-                    throw new Error(response.statusText);
-                }
-
-                const records = (await response.json()) as Array<{
-                    relative_path?: string;
-                    is_important?: boolean;
-                }>;
-                const next = new Set<string>();
-                (records || []).forEach((record) => {
-                    if (record.is_important && record.relative_path) {
-                        next.add(record.relative_path);
+                const response = await MediaModdel.loadImportantPaths();
+                console.log(MediaModdel.important_files);
+                MediaModdel.important_files.forEach(file => {
+                    if (file.is_important) {
+                        importantPaths.add(file.relative_path)
                     }
                 });
-                setImportantPaths(next);
+                console.log(importantPaths);
             } catch (err) {
                 console.error(err);
-                alert("No se pudieron cargar los archivos marcados como importantes");
+                alert(
+                    "No se pudieron cargar los archivos marcados como importantes",
+                );
             }
         };
 
@@ -71,7 +55,6 @@ export default function MediaView() {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-CSRFToken": Cookies.get("csrftoken") || "",
                     },
                     credentials: "include",
                     body: JSON.stringify({

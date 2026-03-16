@@ -12,8 +12,20 @@ export interface DirectoryProps {
     children: Array<FileProps | DirectoryProps>;
 }
 
-export default class MediaModdel {
+export interface ImportantFile {
+    relative_path: string;
+    is_important: boolean;
+    marked_at: string;
+    marked_by: string;
+}
+
+export interface ImportantTableProps {
+    important_files: ImportantFile[];
+}
+
+export default class MediaModel {
     static directories: DirectoryProps;
+    static important_files: ImportantFile[];
 
     static fetchDirectories = async () => {
         try {
@@ -29,7 +41,7 @@ export default class MediaModdel {
 
             if (response.ok) {
                 const data = await response.json();
-                MediaModdel.directories = {
+                MediaModel.directories = {
                     name: "media",
                     type: "directory",
                     relativePath: "",
@@ -43,6 +55,41 @@ export default class MediaModdel {
         } catch (err) {
             console.error(err);
             alert("Error de red al obtener los directorios");
+        }
+    };
+
+    static loadImportantPaths = async () => {
+        try {
+            const response = await fetch(
+                "http://localhost:8000/registros/media/important-files/",
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    credentials: "include",
+                },
+            );
+            console.log('esperando respuseta')
+            if (response.ok) {
+                const data = await response.json();
+                console.log('data:', data)
+                let filtered_files = data.filter(
+                    (file: ImportantFile) => {
+                        return file.is_important;
+                    },
+                );
+                console.log('filtrado:', filtered_files)
+                MediaModel.important_files = filtered_files;
+            } else {
+                console.log(response.statusText)
+                throw new Error(response.statusText);
+            }
+        } catch (err) {
+            console.error(err);
+            console.log(this.important_files);
+            alert(
+                "No se pudieron cargar los archivos marcados como importantes",
+            );
         }
     };
 }
