@@ -69,16 +69,13 @@ export default class MediaModel {
                     credentials: "include",
                 },
             );
-            console.log('esperando respuseta')
             if (response.ok) {
                 const data = await response.json();
-                console.log('data:', data)
                 let filtered_files = data.filter(
                     (file: ImportantFile) => {
                         return file.is_important;
                     },
                 );
-                console.log('filtrado:', filtered_files)
                 MediaModel.important_files = filtered_files;
             } else {
                 console.log(response.statusText)
@@ -86,7 +83,6 @@ export default class MediaModel {
             }
         } catch (err) {
             console.error(err);
-            console.log(this.important_files);
             alert(
                 "No se pudieron cargar los archivos marcados como importantes",
             );

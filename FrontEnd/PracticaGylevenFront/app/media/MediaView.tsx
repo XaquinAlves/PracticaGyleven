@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import MediaModdel from "./MediaModel";
 import DirectoryComponent from "./DirectoryComponent";
 import MediaUploadForm from "./MediaUploadForm";
+import MediaModel from "./MediaModel";
 
 export default function MediaView() {
     const [cargando, setCargando] = useState<boolean>(
@@ -14,35 +15,16 @@ export default function MediaView() {
 
     if (cargando) {
         MediaModdel.fetchDirectories().then(() => {
-            setCargando(false);
+            MediaModel.loadImportantPaths().then(() => {
+                MediaModdel.important_files.forEach((file) => {
+                    if (file.is_important) {
+                        importantPaths.add(file.relative_path);
+                    }
+                })
+                setCargando(false);
+            })
         });
     }
-
-    useEffect(() => {
-        if (cargando) {
-            return;
-        }
-
-        const loadImportantPaths = async () => {
-            try {
-                const response = await MediaModdel.loadImportantPaths();
-                console.log(MediaModdel.important_files);
-                MediaModdel.important_files.forEach(file => {
-                    if (file.is_important) {
-                        importantPaths.add(file.relative_path)
-                    }
-                });
-                console.log(importantPaths);
-            } catch (err) {
-                console.error(err);
-                alert(
-                    "No se pudieron cargar los archivos marcados como importantes",
-                );
-            }
-        };
-
-        void loadImportantPaths();
-    }, [cargando]);
 
     const handleToggleImportant = async (
         relativePath: string,
