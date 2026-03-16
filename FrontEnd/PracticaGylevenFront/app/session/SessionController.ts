@@ -1,6 +1,5 @@
 import React from "react";
 import type { NavigateFunction } from "react-router";
-import Cookies from "js-cookie";
 import { getSession } from "~/routes/home";
 import ApiHelper from "~/common/ApiHelper";
 
@@ -9,9 +8,7 @@ export async function whoami() {
         const response = await fetch(
             ApiHelper.API_URL + "/_allauth/browser/v1/auth/session",
             {
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: ApiHelper.getJsonHeaders(false),
                 credentials: "include",
             },
         );
@@ -43,15 +40,13 @@ export async function changePass(
         alert("Las contraseñas no coinciden");
     } else {
         try {
+            await ApiHelper.ensureCSRF();
             const response = await fetch(
                 ApiHelper.API_URL +
                     "/_allauth/browser/v1/account/password/change",
                 {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRFToken": ApiHelper.CSRF,
-                    },
+                    headers: ApiHelper.getJsonHeaders(),
                     credentials: "include",
                     body: JSON.stringify({
                         current_password: oldPassword,
@@ -83,14 +78,12 @@ export async function resetPass(
         alert("Las contraseñas no coinciden");
     } else {
         try {
+            await ApiHelper.ensureCSRF();
             const response = await fetch(
                 ApiHelper.API_URL + "/_allauth/browser/v1/auth/password/reset",
                 {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRFToken": ApiHelper.CSRF,
-                    },
+                    headers: ApiHelper.getJsonHeaders(),
                     credentials: "include",
                     body: JSON.stringify({
                         key: key,
@@ -121,14 +114,12 @@ export async function login(
 ) {
     event.preventDefault();
     try {
+        await ApiHelper.ensureCSRF();
         const response = await fetch(
             ApiHelper.API_URL + "/_allauth/browser/v1/auth/login",
             {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": ApiHelper.CSRF,
-                },
+                headers: ApiHelper.getJsonHeaders(),
                 credentials: "include",
                 body: JSON.stringify({
                     username: username,
@@ -149,12 +140,10 @@ export async function login(
             );
             if (mfaFlow) {
                 pending2fa = true;
+                await ApiHelper.ensureCSRF();
                 await fetch(ApiHelper.API_URL + "/api/get-totp/", {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRFToken":ApiHelper.CSRF,
-                    },
+                    headers: ApiHelper.getJsonHeaders(),
                     credentials: "include",
                     body: JSON.stringify({
                         username: username,
@@ -182,14 +171,12 @@ export async function login2fa(
     //https://docs.allauth.org/_allauth/{client}/v1/auth/2fa/authenticate
     event.preventDefault();
     try {
+        await ApiHelper.ensureCSRF();
         const response = await fetch(
             ApiHelper.API_URL + "/_allauth/browser/v1/auth/2fa/authenticate",
             {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": ApiHelper.CSRF,
-                },
+                headers: ApiHelper.getJsonHeaders(),
                 credentials: "include",
                 body: JSON.stringify({
                     code: code,
@@ -211,13 +198,12 @@ export async function login2fa(
 
 export async function logout() {
     try {
+        await ApiHelper.ensureCSRF();
         const response = await fetch(
             ApiHelper.API_URL + "/_allauth/browser/v1/auth/session",
             {
                 method: "DELETE",
-                headers: {
-                    "X-CSRFToken": ApiHelper.CSRF,
-                },
+                headers: ApiHelper.getJsonHeaders(),
                 credentials: "include",
             },
         );
@@ -240,14 +226,12 @@ export async function sendRecoveryEmail(
 ) {
     event.preventDefault();
     try {
+        await ApiHelper.ensureCSRF();
         const response = await fetch(
             ApiHelper.API_URL + "/_allauth/browser/v1/auth/password/request",
             {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": ApiHelper.CSRF,
-                },
+                headers: ApiHelper.getJsonHeaders(),
                 credentials: "include",
                 body: JSON.stringify({
                     email: event.target.email.value,
@@ -267,11 +251,12 @@ export async function sendRecoveryEmail(
 }
 
 export async function loginGoogle() {
+    await ApiHelper.ensureCSRF();
     //https://docs.allauth.org/_allauth/{client}/v1/auth/provider/token
     //https://docs.allauth.org/_allauth/browser/v1/auth/provider/redirect
     const form = document.createElement("form");
     form.method = "POST";
-    form.action = "http://localhost:8000/_allauth/browser/v1/auth/provider/redirect";
+    form.action = `${ApiHelper.API_URL}/_allauth/browser/v1/auth/provider/redirect`;
     form.style.display = "none";
 
     const addInput = (name: string, value: string) => {
@@ -285,7 +270,7 @@ export async function loginGoogle() {
     addInput("provider", "google");
     addInput("callback_url", "http://localhost:5173");
     addInput("process", "login");
-    addInput("csrfmiddlewaretoken", Cookies.get("csrftoken") || "");
+    addInput("csrfmiddlewaretoken", ApiHelper.CSRF);
 
     document.body.appendChild(form);
     form.submit();

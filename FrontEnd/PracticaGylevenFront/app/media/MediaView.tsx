@@ -4,7 +4,6 @@ import MediaModdel from "./MediaModel";
 import DirectoryComponent from "./DirectoryComponent";
 import MediaUploadForm from "./MediaUploadForm";
 import MediaModel from "./MediaModel";
-import Cookies from "js-cookie";
 import ApiHelper from "~/common/ApiHelper";
 
 export default function MediaView() {

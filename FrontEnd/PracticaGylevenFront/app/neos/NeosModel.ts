@@ -1,5 +1,4 @@
-import Cookies from "js-cookie";
-import type { ChangeEvent, SetStateAction } from "react";
+import ApiHelper from "~/common/ApiHelper";
 
 export interface NeoItem {
     id: number;
@@ -23,11 +22,9 @@ export default class NeosModel {
     static fetchNeos = async (page: number) => {
         try {
             const response = await fetch(
-                "http://localhost:8000/registros/neos/" + page,
+                `${ApiHelper.API_URL}/registros/neos/${page}`,
                 {
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    headers: ApiHelper.getJsonHeaders(false),
                     credentials: "include",
                 },
             );
@@ -46,12 +43,11 @@ export default class NeosModel {
     static handleSaveToDatabase = async (neos: NeosResponse) => {
         try {
             const response = await fetch(
-                "http://localhost:8000/registros/neos/save/",
+                ApiHelper.API_URL + "/registros/neos/save/",
                 {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRFToken": Cookies.get("csrftoken") || "",
+                        ...ApiHelper.getJsonHeaders(),
                     },
                     credentials: "include",
                     body: JSON.stringify(neos),

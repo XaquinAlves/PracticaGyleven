@@ -16,26 +16,12 @@ export let error: string;
 export let pending2fa: boolean;
 
 export default function Home() {
-    return <Inicio/>
+    return <Inicio />;
 }
 
 export async function getCSRF() {
     try {
-        const response = await fetch(ApiHelper.API_URL + "/api/csrf/", {
-            credentials: "include",
-        });
-        if (response.ok) {
-            let csrfToken = response.headers.get("x-csrftoken");
-            let stringToken;
-            if (csrfToken === null) {
-                stringToken = "";
-            } else {
-                stringToken = csrfToken;
-            }
-            ApiHelper.CSRF = stringToken;
-        } else {
-            throw Error(response.statusText);
-        }
+        await ApiHelper.refreshCSRF();
     } catch (err) {
         console.error(err);
     }

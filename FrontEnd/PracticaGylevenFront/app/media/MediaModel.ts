@@ -34,9 +34,7 @@ export default class MediaModel {
             const response = await fetch(
                 ApiHelper.API_URL + "/registros/media-tree/",
                 {
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    headers: ApiHelper.getJsonHeaders(false),
                     credentials: "include",
                 },
             );
@@ -65,9 +63,7 @@ export default class MediaModel {
             const response = await fetch(
                 ApiHelper.API_URL + "/registros/media/important-files/",
                 {
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    headers: ApiHelper.getJsonHeaders(false),
                     credentials: "include",
                 },
             );

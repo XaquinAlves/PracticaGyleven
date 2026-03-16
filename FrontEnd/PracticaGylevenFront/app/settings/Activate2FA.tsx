@@ -1,6 +1,5 @@
 import type React from "react";
 import { TOTP } from "totp-generator";
-import Cookies from "js-cookie";
 import ApiHelper from "~/common/ApiHelper";
 let email = "";
 
@@ -59,12 +58,11 @@ async function activate2FA() {
     // https://docs.allauth.org/_allauth/{client}/v1/account/authenticators/totp
 
     try {
+        await ApiHelper.ensureCSRF();
         const response = await fetch(
             ApiHelper.API_URL + "/_allauth/browser/v1/account/authenticators/totp",
             {
-                headers: {
-                    "X-CSRFToken": ApiHelper.CSRF,
-                },
+                headers: ApiHelper.getJsonHeaders(false),
                 credentials: "include",
             },
         );
@@ -77,9 +75,7 @@ async function activate2FA() {
                     "/_allauth/browser/v1/account/authenticators/totp",
                 {
                     method: "POST",
-                    headers: {
-                        "X-CSRFToken": ApiHelper.CSRF,
-                    },
+                    headers: ApiHelper.getJsonHeaders(),
                     credentials: "include",
                     body: JSON.stringify({
                         code: otp,
@@ -102,14 +98,13 @@ async function activate2FA() {
 
 async function confirmEmail() {
     //https://docs.allauth.org/_allauth/{client}/v1/account/email
-    https: try {
+    try {
+        await ApiHelper.ensureCSRF();
         const response = await fetch(
             ApiHelper.API_URL + "/_allauth/browser/v1/account/email",
             {
                 method: "PUT",
-                headers: {
-                    "X-CSRFToken": ApiHelper.CSRF,
-                },
+                headers: ApiHelper.getJsonHeaders(),
                 credentials: "include",
                 body: JSON.stringify({
                     email: email,
@@ -129,14 +124,13 @@ async function confirmEmail() {
 
 async function deactivate2FA() {
     try {
+        await ApiHelper.ensureCSRF();
         const response = await fetch(
             ApiHelper.API_URL +
                 "/_allauth/browser/v1/account/authenticators/totp",
             {
                 method: "DELETE",
-                headers: {
-                    "X-CSRFToken": ApiHelper.CSRF,
-                },
+                headers: ApiHelper.getJsonHeaders(),
                 credentials: "include",
             },
         );

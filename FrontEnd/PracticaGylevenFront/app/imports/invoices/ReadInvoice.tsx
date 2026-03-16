@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import Cookies from "js-cookie";
 import ApiHelper from "~/common/ApiHelper";
 
 interface ReadInvoicesProps {
@@ -24,12 +23,13 @@ export default function ReadInvoices({ setCargando }: ReadInvoicesProps) {
 
         setStatus("sending");
         try {
+            await ApiHelper.ensureCSRF();
             const response = await fetch(
                 ApiHelper.API_URL + "/registros/imports/facturas",
                 {
                     method: "POST",
                     headers: {
-                        "X-CSRFToken": ApiHelper.CSRF
+                        "X-CSRFToken": ApiHelper.CSRF,
                     },
                     body: form,
                     credentials: "include",
