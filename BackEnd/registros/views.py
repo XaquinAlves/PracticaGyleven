@@ -107,11 +107,13 @@ def _save_pdf_to_facturas(uploaded_file, destination_root: str) -> str:
 def _build_media_tree(base_path: Path) -> list[dict[str, Any]]:
     entries = []
     for entry in sorted(base_path.iterdir(), key=lambda p: p.name):
+        relative_path = os.path.relpath(entry, settings.MEDIA_ROOT).replace("\\", "/")
         if entry.is_dir():
             entries.append(
                 {
                     "name": entry.name,
                     "type": "directory",
+                    "relative_path": relative_path,
                     "children": _build_media_tree(entry),
                 }
             )
@@ -120,6 +122,7 @@ def _build_media_tree(base_path: Path) -> list[dict[str, Any]]:
                 {
                     "name": entry.name,
                     "type": "file",
+                    "relative_path": relative_path,
                     "size": entry.stat().st_size,
                 }
             )
@@ -137,6 +140,49 @@ def _sanitize_target_dir(raw_dir: str | None) -> str:
     if any(part == ".." for part in parts):
         raise ValueError("Invalid directory path")
     return "/".join(parts)
+
+
+def _important_files_csv_path() -> str:
+    return os.path.join(settings.MEDIA_ROOT, "important_files.csv")
+
+
+def _sanitize_relative_path(raw_path: str) -> str:
+    normalized = raw_path.strip().replace("\\", "/")
+    normalized = normalized.strip("/")
+    if not normalized:
+        raise ValueError("Invalid relative path")
+    parts = [part for part in normalized.split("/") if part and part != "."]
+    if not parts:
+        raise ValueError("Invalid relative path")
+    if any(part == ".." for part in parts):
+        raise ValueError("Invalid relative path")
+    return "/".join(parts)
+
+
+def _load_important_records() -> pd.DataFrame:
+    columns = ["relative_path", "is_important", "marked_at", "marked_by"]
+    csv_path = _important_files_csv_path()
+    if os.path.exists(csv_path):
+        try:
+            df = pd.read_csv(csv_path)
+        except Exception:
+            df = pd.DataFrame(columns=columns)
+    else:
+        df = pd.DataFrame(columns=columns)
+
+    for column in columns:
+        if column not in df.columns:
+            df[column] = False if column == "is_important" else None
+
+    df = df[columns]
+    df["relative_path"] = df["relative_path"].fillna("").astype(str)
+    df["is_important"] = df["is_important"].fillna(False).map(bool)
+    return df
+
+
+def _persist_important_records(df: pd.DataFrame):
+    os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+    df.to_csv(_important_files_csv_path(), index=False)
 
 
 # Create your views here.
@@ -391,3 +437,83 @@ def list_media_structure(request):
         return Response([], status=status.HTTP_200_OK)
     tree = _build_media_tree(media_root)
     return Response(tree)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def list_important_files(request):
+    df = _load_important_records()
+    records = df.to_dict(orient="records")
+    return Response(records)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def toggle_important_file(request):
+    relative_path = request.data.get("relative_path")
+    important_flag = request.data.get("important")
+
+    if not relative_path or not isinstance(relative_path, str):
+        return Response(
+            {"detail": "Campo 'relative_path' obligatorio"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        sanitized_path = _sanitize_relative_path(relative_path)
+    except ValueError as exc:
+        return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    if important_flag is None:
+        return Response(
+            {"detail": "Campo 'important' obligatorio"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if isinstance(important_flag, str):
+        important_bool = important_flag.strip().lower() in (
+            "true",
+            "1",
+            "yes",
+            "y",
+            "t",
+        )
+    else:
+        important_bool = bool(important_flag)
+
+    df = _load_important_records()
+    username = (
+        request.user.get_username()
+        if hasattr(request.user, "get_username")
+        else str(request.user)
+    )
+    timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    mask = df["relative_path"] == sanitized_path
+    if mask.any():
+        df.loc[
+            mask,
+            ["is_important", "marked_at", "marked_by"],
+        ] = important_bool, timestamp, username
+    else:
+        new_row = pd.DataFrame(
+            [
+                {
+                    "relative_path": sanitized_path,
+                    "is_important": important_bool,
+                    "marked_at": timestamp,
+                    "marked_by": username,
+                }
+            ]
+        )
+        df = pd.concat([df, new_row], ignore_index=True)
+
+    _persist_important_records(df)
+    return Response(
+        {
+            "relative_path": sanitized_path,
+            "is_important": important_bool,
+            "marked_at": timestamp,
+            "marked_by": username,
+        }
+    )

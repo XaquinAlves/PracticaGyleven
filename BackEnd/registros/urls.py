@@ -14,4 +14,14 @@ urlpatterns = [
     ),
     path("media-tree/", views.list_media_structure, name="media-tree"),
     path("media/upload/", views.upload_to_media, name="media-upload"),
+    path(
+        "media/important-files/",
+        views.list_important_files,
+        name="important-files",
+    ),
+    path(
+        "media/important-files/toggle/",
+        views.toggle_important_file,
+        name="toggle-important-file",
+    ),
 ]
