@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MediaModel, {
     type ImportantFile,
     type ImportantTableProps,
@@ -8,11 +8,14 @@ import Sidebar from "~/common/Sidebar";
 export default function ImportantFilesView() {
     const [cargando, setCargando] = useState<boolean>();
 
-    if (cargando === undefined) {
-        MediaModel.loadImportantPaths().then(() => {
-            setCargando(false);
-        });
-    }
+
+    useEffect(() => {
+        if (cargando === undefined) {
+            MediaModel.loadImportantPaths().then(() => {
+                setCargando(false);
+            });
+        }
+    },[])
 
     return (
         <div className="row">

@@ -1,6 +1,6 @@
 import Sidebar from "~/common/Sidebar";
 import ReadInvoices from "./ReadInvoice";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import InvoicesTable from "./Invoice";
 import InvoicesModel from "./InvoicesModel";
 
@@ -9,12 +9,13 @@ export default function InvoicesView() {
             InvoicesModel.invoices === undefined,
         );
 
-        if (cargando) {
-            InvoicesModel.fetchInvoices().then(() => {
-                setCargando(false);
-            });
-        }
-
+        useEffect(() => {
+            if (cargando) {
+                InvoicesModel.fetchInvoices().then(() => {
+                    setCargando(false);
+                });
+            }
+        }, [])
         return (
             <div className="row">
                 <Sidebar />

@@ -1,18 +1,35 @@
 import Sidebar from "~/common/Sidebar";
 import NeosTable from "./Neo";
-import { useState } from "react";
+import {
+    useEffect,
+    useState,
+    type ChangeEvent,
+    type SetStateAction,
+} from "react";
 import NeosModel from "./NeosModel";
 
 export default function NeosView() {
     const [cargando, setCargando] = useState<boolean>(
         NeosModel.neos === undefined,
     );
+    const [page, setPage] = useState<number>()
     const neos = NeosModel.neos;
 
-    if (cargando) {
-        NeosModel.fetchNeos().then(() => {
-            setCargando(false);
-        });
+    useEffect(() => {
+        if (cargando) {
+            const neos = async () => {
+                await NeosModel.fetchNeos(page || 0);
+                setCargando(false);
+            };
+            neos();
+        }
+    }, [cargando]);
+
+    async function handlePageChange(
+        event: ChangeEvent<HTMLInputElement, HTMLInputElement>,
+    ) {
+        setPage(parseInt(event.target.value));
+        setCargando(true);
     }
 
     return (
@@ -29,9 +46,7 @@ export default function NeosView() {
                             name="page"
                             min="0"
                             defaultValue="0"
-                            onChange={(evn) =>
-                                NeosModel.handlePageChange(evn, setCargando)
-                            }
+                            onChange={handlePageChange}
                         />
                     </div>
                 </div>
@@ -41,18 +56,14 @@ export default function NeosView() {
                             className="spinner-border text-center"
                             role="status"
                         >
-                            <span className="visually-hidden">
-                                Cargando...
-                            </span>
+                            <span className="visually-hidden">Cargando...</span>
                         </div>
+                    ) : neos ? (
+                        <NeosTable neos={neos.neos} />
                     ) : (
-                        neos ? (
-                            <NeosTable neos={neos.neos} />
-                        ) : (
-                            <p className="text-muted">
-                                No se han cargado los datos todavía.
-                            </p>
-                        )
+                        <p className="text-muted">
+                            No se han cargado los datos todavía.
+                        </p>
                     )}
                 </div>
             </div>

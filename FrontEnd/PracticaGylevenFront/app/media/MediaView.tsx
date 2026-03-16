@@ -1,5 +1,5 @@
 import Sidebar from "~/common/Sidebar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MediaModdel from "./MediaModel";
 import DirectoryComponent from "./DirectoryComponent";
 import MediaUploadForm from "./MediaUploadForm";
@@ -7,28 +7,27 @@ import MediaModel from "./MediaModel";
 import Cookies from "js-cookie";
 
 export default function MediaView() {
-
     const [importantPaths, setImportantPaths] = useState<Set<string>>(
-        new Set()
+        new Set(),
     );
 
     const [cargando, setCargando] = useState<boolean>(
-        MediaModdel.directories === undefined ||
-        importantPaths.size === 0
+        MediaModdel.directories === undefined || importantPaths.size === 0,
     );
-
-    if (cargando) {
-        MediaModdel.fetchDirectories().then(() => {
-            MediaModel.loadImportantPaths().then(() => {
-                MediaModdel.important_files.forEach((file) => {
-                    if (file.is_important) {
-                        importantPaths.add(file.relative_path);
-                    }
-                })
-                setCargando(false);
-            })
-        });
-    }
+    useEffect(() => {
+        if (cargando) {
+            MediaModdel.fetchDirectories().then(() => {
+                MediaModel.loadImportantPaths().then(() => {
+                    MediaModdel.important_files.forEach((file) => {
+                        if (file.is_important) {
+                            importantPaths.add(file.relative_path);
+                        }
+                    });
+                    setCargando(false);
+                });
+            });
+        }
+    },[]);
 
     const handleToggleImportant = async (
         relativePath: string,

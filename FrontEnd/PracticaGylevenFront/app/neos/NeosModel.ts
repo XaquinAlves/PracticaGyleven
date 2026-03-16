@@ -32,10 +32,10 @@ export default class NeosModel {
         setCargando(true);
     };
 
-    static fetchNeos = async () => {
+    static fetchNeos = async (page: number) => {
         try {
             const response = await fetch(
-                "http://localhost:8000/registros/neos/" + this.page,
+                "http://localhost:8000/registros/neos/" + page,
                 {
                     headers: {
                         "Content-Type": "application/json",
