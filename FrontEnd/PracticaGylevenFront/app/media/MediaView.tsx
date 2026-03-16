@@ -4,6 +4,7 @@ import MediaModdel from "./MediaModel";
 import DirectoryComponent from "./DirectoryComponent";
 import MediaUploadForm from "./MediaUploadForm";
 import MediaModel from "./MediaModel";
+import Cookies from "js-cookie";
 
 export default function MediaView() {
 
@@ -40,6 +41,7 @@ export default function MediaView() {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
+                        "X-CSRFToken": Cookies.get("csrftoken") || "",
                     },
                     credentials: "include",
                     body: JSON.stringify({

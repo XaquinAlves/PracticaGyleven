@@ -4,7 +4,6 @@ import Sidebar from "~/common/Sidebar";
 
 export default function ImportantFilesView() {
             const [cargando, setCargando] = useState<boolean>(
-                MediaModel.important_files === undefined,
             );
 
             MediaModel.loadImportantPaths().then(() => {
