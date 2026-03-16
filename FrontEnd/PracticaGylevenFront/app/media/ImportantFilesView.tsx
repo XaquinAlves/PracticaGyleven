@@ -79,5 +79,11 @@ export function ImportantFilesTable({ important_files }: ImportantTableProps) {
                 </tbody>
             </table>
         );
+    } else {
+        return (
+            <div className="alert">
+                Carganddo
+            </div>
+        )
     }
 }

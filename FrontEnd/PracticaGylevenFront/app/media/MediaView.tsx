@@ -19,16 +19,18 @@ export default function MediaView() {
         if (cargando) {
             MediaModdel.fetchDirectories().then(() => {
                 MediaModel.loadImportantPaths().then(() => {
+                    let importantSet = new Set<string>();
                     MediaModdel.important_files.forEach((file) => {
                         if (file.is_important) {
-                            importantPaths.add(file.relative_path);
+                            importantSet.add(file.relative_path);
                         }
                     });
+                    setImportantPaths(importantSet);
                     setCargando(false);
                 });
             });
         }
-    },[]);
+    }, [cargando]);
 
     const handleToggleImportant = async (
         relativePath: string,

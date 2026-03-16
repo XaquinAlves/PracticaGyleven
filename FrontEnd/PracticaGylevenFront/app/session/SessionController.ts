@@ -7,7 +7,7 @@ import ApiHelper from "~/common/ApiHelper";
 export async function whoami() {
     try {
         const response = await fetch(
-            ApiHelper.API_URL + "_allauth/browser/v1/auth/session",
+            ApiHelper.API_URL + "/_allauth/browser/v1/auth/session",
             {
                 headers: {
                     "Content-Type": "application/json",
