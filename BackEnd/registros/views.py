@@ -3,8 +3,10 @@ import logging
 import os
 from pathlib import Path
 from typing import Any
+from mimetypes import guess_type
+
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import FileResponse, Http404, JsonResponse
 import pandas as pd
 import re
 from datetime import datetime
@@ -183,6 +185,21 @@ def _load_important_records() -> pd.DataFrame:
 def _persist_important_records(df: pd.DataFrame):
     os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
     df.to_csv(_important_files_csv_path(), index=False)
+
+
+def _is_previewable_mime(mime_type: str | None) -> bool:
+    if not mime_type:
+        return False
+    previewable_prefixes = ("image/", "text/")
+    previewable_exact = {
+        "application/pdf",
+        "application/json",
+        "application/xml",
+        "text/html",
+    }
+    return any(mime_type.startswith(prefix) for prefix in previewable_prefixes) or (
+        mime_type in previewable_exact
+    )
 
 
 # Create your views here.
@@ -437,6 +454,37 @@ def list_media_structure(request):
         return Response([], status=status.HTTP_200_OK)
     tree = _build_media_tree(media_root)
     return Response(tree)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def download_media_file(request):
+    relative_path = request.query_params.get("path")
+    if not relative_path:
+        raise Http404("Se requiere el parámetro 'path'")
+
+    try:
+        sanitized = _sanitize_relative_path(relative_path)
+    except ValueError as exc:
+        raise Http404(str(exc))
+
+    file_path = Path(settings.MEDIA_ROOT) / sanitized
+    if not file_path.exists() or not file_path.is_file():
+        raise Http404("Archivo no encontrado")
+
+    mime_type, _ = guess_type(str(file_path))
+    as_attachment = not _is_previewable_mime(mime_type)
+    response = FileResponse(
+        file_path.open("rb"),
+        as_attachment=as_attachment,
+        filename=file_path.name,
+    )
+    if mime_type:
+        response["Content-Type"] = mime_type
+    if not as_attachment:
+        response["Content-Disposition"] = f'inline; filename="{file_path.name}"'
+
+    return response
 
 
 @api_view(["GET"])

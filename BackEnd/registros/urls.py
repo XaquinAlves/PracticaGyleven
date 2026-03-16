@@ -24,4 +24,9 @@ urlpatterns = [
         views.toggle_important_file,
         name="toggle-important-file",
     ),
+    path(
+        "media/download/",
+        views.download_media_file,
+        name="media-download",
+    ),
 ]
