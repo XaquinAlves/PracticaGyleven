@@ -2,11 +2,12 @@ import React from "react";
 import type { NavigateFunction } from "react-router";
 import Cookies from "js-cookie";
 import { getSession } from "~/routes/home";
+import ApiHelper from "~/common/ApiHelper";
 
 export async function whoami() {
     try {
         const response = await fetch(
-            "http://localhost:8000/_allauth/browser/v1/auth/session",
+            ApiHelper.API_URL + "_allauth/browser/v1/auth/session",
             {
                 headers: {
                     "Content-Type": "application/json",
@@ -43,12 +44,13 @@ export async function changePass(
     } else {
         try {
             const response = await fetch(
-                "http://localhost:8000/_allauth/browser/v1/account/password/change",
+                ApiHelper.API_URL +
+                    "/_allauth/browser/v1/account/password/change",
                 {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-CSRFToken": Cookies.get("csrftoken") || "",
+                        "X-CSRFToken": ApiHelper.CSRF,
                     },
                     credentials: "include",
                     body: JSON.stringify({
@@ -82,12 +84,12 @@ export async function resetPass(
     } else {
         try {
             const response = await fetch(
-                "http://localhost:8000/_allauth/browser/v1/auth/password/reset",
+                ApiHelper.API_URL + "/_allauth/browser/v1/auth/password/reset",
                 {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-CSRFToken": Cookies.get("csrftoken") || "",
+                        "X-CSRFToken": ApiHelper.CSRF,
                     },
                     credentials: "include",
                     body: JSON.stringify({
@@ -120,12 +122,12 @@ export async function login(
     event.preventDefault();
     try {
         const response = await fetch(
-            "http://localhost:8000/_allauth/browser/v1/auth/login",
+            ApiHelper.API_URL + "/_allauth/browser/v1/auth/login",
             {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-CSRFToken": Cookies.get("csrftoken") || "",
+                    "X-CSRFToken": ApiHelper.CSRF,
                 },
                 credentials: "include",
                 body: JSON.stringify({
@@ -147,11 +149,11 @@ export async function login(
             );
             if (mfaFlow) {
                 pending2fa = true;
-                await fetch("http://localhost:8000/api/get-totp/", {
+                await fetch(ApiHelper.API_URL + "/api/get-totp/", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-CSRFToken": Cookies.get("csrftoken") || "",
+                        "X-CSRFToken":ApiHelper.CSRF,
                     },
                     credentials: "include",
                     body: JSON.stringify({
@@ -181,12 +183,12 @@ export async function login2fa(
     event.preventDefault();
     try {
         const response = await fetch(
-            "http://localhost:8000/_allauth/browser/v1/auth/2fa/authenticate",
+            ApiHelper.API_URL + "/_allauth/browser/v1/auth/2fa/authenticate",
             {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-CSRFToken": Cookies.get("csrftoken") || "",
+                    "X-CSRFToken": ApiHelper.CSRF,
                 },
                 credentials: "include",
                 body: JSON.stringify({
@@ -210,11 +212,11 @@ export async function login2fa(
 export async function logout() {
     try {
         const response = await fetch(
-            "http://localhost:8000/_allauth/browser/v1/auth/session",
+            ApiHelper.API_URL + "/_allauth/browser/v1/auth/session",
             {
                 method: "DELETE",
                 headers: {
-                    "X-CSRFToken": Cookies.get("csrftoken") || "",
+                    "X-CSRFToken": ApiHelper.CSRF,
                 },
                 credentials: "include",
             },
@@ -239,12 +241,12 @@ export async function sendRecoveryEmail(
     event.preventDefault();
     try {
         const response = await fetch(
-            "http://localhost:8000/_allauth/browser/v1/auth/password/request",
+            ApiHelper.API_URL + "/_allauth/browser/v1/auth/password/request",
             {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-CSRFToken": Cookies.get("csrftoken") || "",
+                    "X-CSRFToken": ApiHelper.CSRF,
                 },
                 credentials: "include",
                 body: JSON.stringify({

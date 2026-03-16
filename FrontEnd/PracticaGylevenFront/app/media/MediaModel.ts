@@ -1,3 +1,5 @@
+import ApiHelper from "~/common/ApiHelper";
+
 export interface FileProps {
     name: string;
     type: "file";
@@ -30,7 +32,7 @@ export default class MediaModel {
     static fetchDirectories = async () => {
         try {
             const response = await fetch(
-                "http://localhost:8000/registros/media-tree/",
+                ApiHelper.API_URL + "/registros/media-tree/",
                 {
                     headers: {
                         "Content-Type": "application/json",
@@ -61,7 +63,7 @@ export default class MediaModel {
     static loadImportantPaths = async () => {
         try {
             const response = await fetch(
-                "http://localhost:8000/registros/media/important-files/",
+                ApiHelper.API_URL + "/registros/media/important-files/",
                 {
                     headers: {
                         "Content-Type": "application/json",

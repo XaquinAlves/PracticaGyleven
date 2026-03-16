@@ -1,3 +1,4 @@
+import ApiHelper from "~/common/ApiHelper";
 import type { Route } from "./+types/home";
 import Inicio from "~/Inicio";
 
@@ -20,7 +21,7 @@ export default function Home() {
 
 export async function getCSRF() {
     try {
-        const response = await fetch("http://localhost:8000/api/csrf/", {
+        const response = await fetch(ApiHelper.API_URL + "/api/csrf/", {
             credentials: "include",
         });
         if (response.ok) {
@@ -31,7 +32,7 @@ export async function getCSRF() {
             } else {
                 stringToken = csrfToken;
             }
-            token = stringToken;
+            ApiHelper.CSRF = stringToken;
         } else {
             throw Error(response.statusText);
         }
@@ -43,7 +44,7 @@ export async function getCSRF() {
 export async function getSession() {
     try {
         const response = await fetch(
-            "http://localhost:8000/_allauth/browser/v1/auth/session",
+            ApiHelper.API_URL + "/_allauth/browser/v1/auth/session",
             {
                 credentials: "include",
             },

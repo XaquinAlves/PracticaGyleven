@@ -5,6 +5,7 @@ import DirectoryComponent from "./DirectoryComponent";
 import MediaUploadForm from "./MediaUploadForm";
 import MediaModel from "./MediaModel";
 import Cookies from "js-cookie";
+import ApiHelper from "~/common/ApiHelper";
 
 export default function MediaView() {
     const [importantPaths, setImportantPaths] = useState<Set<string>>(
@@ -35,12 +36,12 @@ export default function MediaView() {
     ) => {
         try {
             const response = await fetch(
-                "http://localhost:8000/registros/media/important-files/toggle/",
+                ApiHelper.API_URL + "/registros/media/important-files/toggle/",
                 {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-CSRFToken": Cookies.get("csrftoken") || "",
+                        "X-CSRFToken": ApiHelper.CSRF,
                     },
                     credentials: "include",
                     body: JSON.stringify({

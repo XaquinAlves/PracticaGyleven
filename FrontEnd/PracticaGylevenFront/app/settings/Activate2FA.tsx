@@ -1,6 +1,7 @@
 import type React from "react";
 import { TOTP } from "totp-generator";
 import Cookies from "js-cookie";
+import ApiHelper from "~/common/ApiHelper";
 let email = "";
 
 export default function Activate2FA() {
@@ -59,10 +60,10 @@ async function activate2FA() {
 
     try {
         const response = await fetch(
-            "http://localhost:8000/_allauth/browser/v1/account/authenticators/totp",
+            ApiHelper.API_URL + "/_allauth/browser/v1/account/authenticators/totp",
             {
                 headers: {
-                    "X-CSRFToken": Cookies.get("csrftoken") || "",
+                    "X-CSRFToken": ApiHelper.CSRF,
                 },
                 credentials: "include",
             },
@@ -72,11 +73,12 @@ async function activate2FA() {
             let secret = await data.meta.secret;
             const { otp, expires } = await TOTP.generate(secret);
             const second_response = await fetch(
-                "http://localhost:8000/_allauth/browser/v1/account/authenticators/totp",
+                ApiHelper.API_URL +
+                    "/_allauth/browser/v1/account/authenticators/totp",
                 {
                     method: "POST",
                     headers: {
-                        "X-CSRFToken": Cookies.get("csrftoken") || "",
+                        "X-CSRFToken": ApiHelper.CSRF,
                     },
                     credentials: "include",
                     body: JSON.stringify({
@@ -102,11 +104,11 @@ async function confirmEmail() {
     //https://docs.allauth.org/_allauth/{client}/v1/account/email
     https: try {
         const response = await fetch(
-            "http://localhost:8000/_allauth/browser/v1/account/email",
+            ApiHelper.API_URL + "/_allauth/browser/v1/account/email",
             {
                 method: "PUT",
                 headers: {
-                    "X-CSRFToken": Cookies.get("csrftoken") || "",
+                    "X-CSRFToken": ApiHelper.CSRF,
                 },
                 credentials: "include",
                 body: JSON.stringify({
@@ -128,11 +130,12 @@ async function confirmEmail() {
 async function deactivate2FA() {
     try {
         const response = await fetch(
-            "http://localhost:8000/_allauth/browser/v1/account/authenticators/totp",
+            ApiHelper.API_URL +
+                "/_allauth/browser/v1/account/authenticators/totp",
             {
                 method: "DELETE",
                 headers: {
-                    "X-CSRFToken": Cookies.get("csrftoken") || "",
+                    "X-CSRFToken": ApiHelper.CSRF,
                 },
                 credentials: "include",
             },

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { FileProps } from "./MediaModel";
+import ApiHelper from "~/common/ApiHelper";
 
 interface FileComponentProps {
     file: FileProps;
@@ -44,7 +45,7 @@ export default function FileComponent({
     const handleFetchFile = async () => {
         setIsFetching(true);
         try {
-            const url = `http://localhost:8000/registros/media/download/?path=${encodeURIComponent(
+            const url = `${ApiHelper.API_URL}/registros/media/download/?path=${encodeURIComponent(
                 file.relativePath,
             )}`;
             const response = await fetch(url, {

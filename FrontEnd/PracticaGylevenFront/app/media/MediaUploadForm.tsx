@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import Cookies from "js-cookie";
 import MediaModel, {type DirectoryProps } from "./MediaModel";
+import ApiHelper from "~/common/ApiHelper";
 
 interface MediaUploadFormProps {
     onUploadSuccess?: () => void;
@@ -77,11 +78,11 @@ export default function MediaUploadForm({ onUploadSuccess }: MediaUploadFormProp
         setMessage("");
         try {
             const response = await fetch(
-                "http://localhost:8000/registros/media/upload/",
+                ApiHelper.API_URL + "/registros/media/upload/",
                 {
                     method: "POST",
                     headers: {
-                        "X-CSRFToken": Cookies.get("csrftoken") || "",
+                        "X-CSRFToken": ApiHelper.CSRF
                     },
                     body: form,
                     credentials: "include",

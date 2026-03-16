@@ -8,14 +8,13 @@ import Sidebar from "~/common/Sidebar";
 export default function ImportantFilesView() {
     const [cargando, setCargando] = useState<boolean>();
 
-
     useEffect(() => {
         if (cargando === undefined) {
             MediaModel.loadImportantPaths().then(() => {
                 setCargando(false);
             });
         }
-    },[])
+    }, []);
 
     return (
         <div className="row">
@@ -55,28 +54,30 @@ export function ImportantFile({
 }
 
 export function ImportantFilesTable({ important_files }: ImportantTableProps) {
-    return (
-        <table className="table table-striped table-bordered">
-            <thead>
-                <tr>
-                    <th>Ruta relativa</th>
-                    <th>Marcado en</th>
-                    <th>Marcado por</th>
-                </tr>
-            </thead>
-            <tbody>
-                {important_files.map((file) => {
-                    return (
-                        <ImportantFile
-                            key={file.relative_path}
-                            relative_path={file.relative_path}
-                            marked_at={file.marked_at}
-                            marked_by={file.marked_by}
-                            is_important={true}
-                        />
-                    );
-                })}
-            </tbody>
-        </table>
-    );
+    if (important_files !== undefined) {
+        return (
+            <table className="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th>Ruta relativa</th>
+                        <th>Marcado en</th>
+                        <th>Marcado por</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {important_files.map((file) => {
+                        return (
+                            <ImportantFile
+                                key={file.relative_path}
+                                relative_path={file.relative_path}
+                                marked_at={file.marked_at}
+                                marked_by={file.marked_by}
+                                is_important={true}
+                            />
+                        );
+                    })}
+                </tbody>
+            </table>
+        );
+    }
 }

@@ -1,3 +1,4 @@
+import ApiHelper from "~/common/ApiHelper";
 export interface InvoiceProps {
     name: string;
     page_count: number;
@@ -17,7 +18,7 @@ export default class InvoicesModel {
     static fetchInvoices = async () => {
         try {
             const response = await fetch(
-                "http://localhost:8000/registros/imports/facturas/list/",
+                ApiHelper.API_URL + "/registros/imports/facturas/list/",
                 {
                     headers: {
                         "Content-Type": "application/json",
