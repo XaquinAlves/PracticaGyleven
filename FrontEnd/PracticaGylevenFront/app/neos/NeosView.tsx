@@ -12,13 +12,13 @@ export default function NeosView() {
     const [cargando, setCargando] = useState<boolean>(
         NeosModel.neos === undefined,
     );
-    const [page, setPage] = useState<number>()
+    const [page, setPage] = useState<number>(0)
     const neos = NeosModel.neos;
 
     useEffect(() => {
         if (cargando) {
             const neos = async () => {
-                await NeosModel.fetchNeos(page || 0);
+                await NeosModel.fetchNeos(page);
                 setCargando(false);
             };
             neos();

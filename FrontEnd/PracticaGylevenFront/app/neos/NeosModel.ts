@@ -18,20 +18,8 @@ export interface NeosTableProps {
 }
 
 export default class NeosModel {
-    static page: number = 0;
     static neos?: NeosResponse;
-
-    static handlePageChange = async (
-        event: ChangeEvent<HTMLInputElement, HTMLInputElement>,
-        setCargando: {
-            (value: SetStateAction<boolean>): void;
-            (arg0: boolean): void;
-        },
-    ) => {
-        this.page = parseInt(event.target.value);
-        setCargando(true);
-    };
-
+    
     static fetchNeos = async (page: number) => {
         try {
             const response = await fetch(
