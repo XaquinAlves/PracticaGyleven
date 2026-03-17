@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type SetStateAction } from "react";
-import MediaModel, { type DirectoryProps } from "./MediaModel";
+import { type DirectoryProps } from "./MediaModel";
 import ApiHelper from "~/common/ApiHelper";
+import { useMedia } from "./useMedia";
 
 interface MediaUploadFormProps {
     onUploadSuccess?: () => void;
@@ -46,7 +47,7 @@ export default function MediaUploadForm({
     const [newDirectory, setNewDirectory] = useState("");
     const [message, setMessage] = useState<string>("");
 
-    const directories = MediaModel.directories;
+    const { directories } = useMedia();
     const basePaths = useMemo(
         () => buildDirectoryPaths(directories),
         [directories],

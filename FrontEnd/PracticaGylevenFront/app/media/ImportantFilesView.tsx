@@ -1,43 +1,25 @@
-import { useEffect, useState } from "react";
-import MediaModel, {
-    type ImportantFile,
-    type ImportantTableProps,
-} from "./MediaModel";
 import Sidebar from "~/common/Sidebar";
 import ErrorAlert from "~/common/ErrorAlert";
+import { type ImportantFile, type ImportantTableProps } from "./MediaModel";
+import { MediaProvider, useMedia } from "./useMedia";
 
 export default function ImportantFilesView() {
-    const [cargando, setCargando] = useState<boolean>(true);
-    const [error, setError] = useState<string>("");
+    return (
+        <MediaProvider>
+            <ImportantFilesViewContent />
+        </MediaProvider>
+    );
+}
 
-    useEffect(() => {
-        if (!cargando) {
-            return;
-        }
-
-        const loadImportantFiles = async () => {
-            setError("");
-            try {
-                await MediaModel.loadImportantPaths({
-                    force: MediaModel.forceFetch,
-                });
-                MediaModel.forceFetch = false;
-            } catch (err) {
-                setError(err instanceof Error ? err.message : String(err));
-            } finally {
-                setCargando(false);
-            }
-        };
-
-        void loadImportantFiles();
-    }, [cargando]);
+function ImportantFilesViewContent() {
+    const { importantFiles, loading, error, refresh } = useMedia();
 
     return (
         <div className="row">
             <Sidebar />
             <div className="row justify-content-center col-9 col-lg-10">
                 <div className="col-12 col-md-12 mt-5">
-                    {cargando ? (
+                    {loading ? (
                         <div
                             className="spinner-border text-center"
                             role="status"
@@ -47,12 +29,12 @@ export default function ImportantFilesView() {
                     ) : error ? (
                         <ErrorAlert
                             message={error}
-                            onRetry={() => setCargando(true)}
+                            onRetry={() => refresh()}
                             className="btn-sm"
                         />
                     ) : (
                         <ImportantFilesTable
-                            important_files={MediaModel.important_files || []}
+                            important_files={importantFiles}
                         />
                     )}
                 </div>

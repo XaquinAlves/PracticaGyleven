@@ -1,4 +1,4 @@
-import ApiHelper from "~/common/ApiHelper";
+﻿import ApiHelper from  "~/common/ApiHelper";
 
 export interface FileProps {
     name: string;
@@ -25,114 +25,10 @@ export interface ImportantTableProps {
     important_files: ImportantFile[];
 }
 
-export default class MediaModel {
-    static directories?: DirectoryProps;
-    static important_files?: ImportantFile[];
-    static directoriesPromise: Promise<void> | null = null;
-    static importantFilesPromise: Promise<void> | null = null;
-    static forceFetch = false;
-    static treeVersion = "";
-
-    static async updateTreeVersion(): Promise<boolean> {
-        try {
-            const version = await MediaModel.fetchTreeVersion();
-            if (!version) {
-                return false;
-            }
-            const changed = version !== MediaModel.treeVersion;
-            MediaModel.treeVersion = version;
-            return changed;
-        } catch (err) {
-            throw err;
-        }
-    }
-
-    static async fetchTreeVersion(): Promise<string> {
-        const response = await fetch(
-            ApiHelper.API_URL + "/registros/media-tree/version/",
-            {
-                headers: ApiHelper.getJsonHeaders(false),
-                credentials: "include",
-            },
-        );
-        if (!response.ok) {
-            throw new Error(response.statusText);
-        }
-        const data = await response.json();
-        return data.tree_version ?? "";
-    }
-
-    static fetchDirectories = (options?: { force?: boolean }) => {
-        if (!options?.force && MediaModel.directoriesPromise) {
-            return MediaModel.directoriesPromise;
-        }
-
-        MediaModel.directoriesPromise = (async () => {
-            try {
-                const response = await fetch(
-                    ApiHelper.API_URL + "/registros/media-tree/",
-                    {
-                        headers: ApiHelper.getJsonHeaders(false),
-                        credentials: "include",
-                    },
-                );
-                if (!response.ok) throw new Error(response.statusText);
-                const data = await response.json();
-                MediaModel.directories = {
-                    name: "media",
-                    type: "directory",
-                    relativePath: "",
-                    children: (data || []).map((entry: ApiEntry) =>
-                        normalizeEntry(entry),
-                    ),
-                };
-            } catch (err) {
-                MediaModel.directoriesPromise = null;
-                console.error(err);
-                alert("Error de red al obtener los directorios");
-                throw err;
-            }
-        })();
-
-        return MediaModel.directoriesPromise;
-    };
-
-    static loadImportantPaths = (options?: { force?: boolean }) => {
-        if (!options?.force && MediaModel.importantFilesPromise) {
-            return MediaModel.importantFilesPromise;
-        }
-
-        MediaModel.importantFilesPromise = (async () => {
-            try {
-                const response = await fetch(
-                    ApiHelper.API_URL + "/registros/media/important-files/",
-                    {
-                        headers: ApiHelper.getJsonHeaders(false),
-                        credentials: "include",
-                    },
-                );
-                if (response.ok) {
-                    const data = await response.json();
-                    let filtered_files = data.filter((file: ImportantFile) => {
-                        return file.is_important;
-                    });
-                    MediaModel.important_files = filtered_files;
-                } else {
-                    console.log(response.statusText);
-                    throw new Error(response.statusText);
-                }
-            } catch (err) {
-                MediaModel.importantFilesPromise = null;
-                console.error(err);
-                alert(
-                    "No se pudieron cargar los archivos marcados como importantes",
-                );
-                throw err;
-            }
-        })();
-
-        return MediaModel.importantFilesPromise;
-    };
+export function isDirectory(
+    entry: FileProps | DirectoryProps | { type: string },
+): entry is DirectoryProps {
+    return entry.type === "directory";
 }
 
 interface ApiBaseEntry {
@@ -170,8 +66,45 @@ function normalizeEntry(entry: ApiEntry): FileProps | DirectoryProps {
     };
 }
 
-export function isDirectory(
-    entry: FileProps | DirectoryProps,
-): entry is DirectoryProps {
-    return entry.type === "directory";
+export async function fetchMediaTree() {
+    const response = await fetch(ApiHelper.API_URL + "registros/media-tree/", {
+        headers: ApiHelper.getJsonHeaders(false),
+        credentials: "include",
+    });
+    if (!response.ok) {
+        throw new Error(response.statusText || "No se pudo cargar el árbol de media");
+    }
+    const data: ApiEntry[] = await response.json();
+    return data.map(normalizeEntry);
+}
+
+export async function fetchImportantFiles() {
+    const response = await fetch(
+        ApiHelper.API_URL + "/registros/media/important-files/",
+        {
+            headers: ApiHelper.getJsonHeaders(false),
+            credentials: "include",
+        },
+    );
+    if (!response.ok) {
+        throw new Error("No se pudieron cargar los archivos importantes");
+    }
+    const data: ImportantFile[] = await response.json();
+    return data.filter((file) => file.is_important);
+}
+
+
+export async function fetchMediaTreeVersion() {
+    const response = await fetch(
+        ApiHelper.API_URL + "/registros/media-tree/version/",
+        {
+            headers: ApiHelper.getJsonHeaders(false),
+            credentials: "include",
+        },
+    );
+    if (!response.ok) {
+        throw new Error(response.statusText || "No se pudo verificar versión del árbol");
+    }
+    const data = await response.json();
+    return data.tree_version ?? "";
 }
