@@ -4,9 +4,39 @@ export const ErrorMessages = {
     pageRange: (min: number, max: number) =>
         `El valor debe estar entre ${min} y ${max}.`,
     saveNeos: "Error al guardar los datos.",
-    downloadFallback:
-        "No pudimos abrir el archivo. Se descargará en su lugar.",
+    downloadFallback: "No pudimos abrir el archivo. Se descargará en su lugar.",
     toggleImportant: "Error al alternar favorito",
     emptyNeos: "No se han cargado los datos todavía.",
     genericFetch: "Error al obtener los datos.",
+    mediaEmpty: "No se han cargado los datos todavía.",
+    importantFilesEmpty: "No hay archivos marcados como importantes.",
+    mediaUploadSuccess: "Archivo subido correctamente.",
+    mediaUploadFailure:
+        "No se pudo subir el archivo. Revisa la carpeta seleccionada.",
+    mediaUploadFolderRequired: "Debes seleccionar una carpeta antes de subir.",
+    invoicesFetch: "Error al obtener la lista de facturas.",
+    invoicesEmpty: "No hay facturas registradas.",
+    invoiceDetailError: "No se pudo leer la factura seleccionada.",
+    invoiceUploadSuccess: "Facturas subidas correctamente.",
+    invoiceUploadError: "No se pudieron subir las facturas.",
+    passwordMismatch: "Las contraseñas no coinciden.",
+    passwordStrength:
+        "La contraseña debe tener mínimo 8 caracteres, con mayúsculas, minúsculas, números y símbolos.",
+    passwordChangeError: "No se pudo cambiar la contraseña.",
+    passwordResetError: "No se pudo restablecer la contraseña.",
+    invalidCredentials: "Usuario y/o contraseña incorrectos.",
+    twoFaError: "Código 2FA incorrecto.",
+    logoutError: "No se pudo cerrar la sesión.",
+    recoveryError: "No se pudo enviar el correo de recuperación.",
+    recoverySent:
+        "Correo de recuperación enviado. Revisa tu bandeja de entrada.",
+    mediaError: "Error al cargar los datos de media.",
+    directoryNameTooLong: "El nombre de carpeta es demasiado largo (máx. 100 caracteres).",
+    directoryAlreadyExists: "La carpeta ya existe.",
+    directoryCreated: (path: string) => `Se usará la carpeta ${path}`,
+    filesRequired: "Selecciona al menos un archivo.",
+    uploadError: "Hubo un error al subir los archivos.",
+    uploadSuccess: (count: number, pathLabel: string) =>
+        `Subidos ${count} archivos en ${pathLabel}`,
 };
+

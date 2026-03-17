@@ -1,4 +1,5 @@
 import ApiHelper from "~/common/ApiHelper";
+import { ErrorMessages } from "~/common/messageCatalog";
 
 export interface NeoItem {
     id: number;
@@ -25,7 +26,7 @@ export async function fetchNeos(page: number) {
     });
     if (!response.ok) {
         throw new Error(
-            (await parseDetail(response)) || "Error al obtener los NEOs",
+            (await parseDetail(response)) || ErrorMessages.genericFetch,
         );
     }
     return (await response.json()) as NeosResponse;
@@ -42,7 +43,7 @@ export async function saveNeos(neos: NeosResponse) {
     });
     if (!response.ok) {
         throw new Error(
-            (await parseDetail(response)) || "Error al guardar los NEOs",
+            (await parseDetail(response)) || ErrorMessages.saveNeos,
         );
     }
 }

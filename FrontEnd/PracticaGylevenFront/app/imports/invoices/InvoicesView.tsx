@@ -2,6 +2,7 @@ import Sidebar from "~/common/Sidebar";
 import ReadInvoices from "./ReadInvoice";
 import InvoicesTable from "./Invoice";
 import ErrorAlert from "~/common/ErrorAlert";
+import { ErrorMessages } from "~/common/messageCatalog";
 import { InvoicesProvider, useInvoices } from "./useInvoices";
 
 export default function InvoicesView() {
@@ -37,7 +38,7 @@ function InvoicesViewContent() {
                         <InvoicesTable invoices={invoices} />
                     ) : (
                         <p className="text-muted">
-                            No se han cargado los datos todavía.
+                            {ErrorMessages.invoicesEmpty}
                         </p>
                     )}
                 </div>

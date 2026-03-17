@@ -2,6 +2,7 @@ import type React from "react";
 import type { NavigateFunction } from "react-router";
 import { getSession } from "~/routes/home";
 import ApiHelper from "~/common/ApiHelper";
+import { ErrorMessages } from "~/common/messageCatalog";
 
 export const PASSWORD_RULES = [
     "mínimo 8 caracteres",
@@ -12,26 +13,21 @@ export const PASSWORD_RULES = [
 ];
 
 export function ensurePasswordStrength(password: string) {
+    const strengthMessage = ErrorMessages.passwordStrength;
     if (password.length < 8) {
-        throw new Error("La contraseña debe tener al menos 8 caracteres.");
+        throw new Error(strengthMessage);
     }
     if (!/[A-Z]/.test(password)) {
-        throw new Error(
-            "La contraseña debe incluir al menos una letra mayúscula.",
-        );
+        throw new Error(strengthMessage);
     }
     if (!/[a-z]/.test(password)) {
-        throw new Error(
-            "La contraseña debe incluir al menos una letra minúscula.",
-        );
+        throw new Error(strengthMessage);
     }
     if (!/[0-9]/.test(password)) {
-        throw new Error("La contraseña debe incluir al menos un número.");
+        throw new Error(strengthMessage);
     }
     if (!/[^A-Za-z0-9]/.test(password)) {
-        throw new Error(
-            "La contraseña debe incluir al menos un símbolo especial.",
-        );
+        throw new Error(strengthMessage);
     }
 }
 
@@ -103,7 +99,7 @@ export async function changePass(
     event.preventDefault();
 
     if (newPassword !== repeatPassword) {
-        throw new Error("Las contraseñas no coinciden");
+        throw new Error(ErrorMessages.passwordMismatch);
     }
 
     ensurePasswordStrength(newPassword);
@@ -127,7 +123,7 @@ export async function changePass(
                 return;
             } else {
                 const detail = await parseDetail(response);
-                throw Error(detail || "No se pudo cambiar la contraseña");
+                throw Error(detail || ErrorMessages.passwordChangeError);
             }
         } catch (err) {
             console.error(err);
@@ -145,7 +141,7 @@ export async function resetPass(
 ) {
     event.preventDefault();
     if (password !== repeatPassword) {
-        throw new Error("Las contraseñas no coinciden");
+        throw new Error(ErrorMessages.passwordMismatch);
     }
 
     ensurePasswordStrength(password);
@@ -168,7 +164,7 @@ export async function resetPass(
             window.location.reload();
         } else {
             const detail = await parseDetail(response);
-            throw Error(detail || "No se pudo restablecer la contraseña");
+            throw Error(detail || ErrorMessages.passwordResetError);
         }
     } catch (err) {
         console.error(err);
@@ -228,7 +224,7 @@ export async function login(
     }
 
     const detail = await parseDetail(response);
-    throw new Error(detail || "Usuario y/o contraseña incorrectos");
+    throw new Error(detail || ErrorMessages.invalidCredentials);
 }
 
 export async function login2fa(
@@ -251,7 +247,7 @@ export async function login2fa(
     );
     if (!response.ok) {
         const detail = await parseDetail(response);
-        throw new Error(detail || "Código de autenticación incorrecto");
+        throw new Error(detail || ErrorMessages.twoFaError);
     }
     await response.json();
     getSession();
@@ -274,7 +270,7 @@ export async function logout() {
         return;
     }
     const detail = await parseDetail(response);
-    throw new Error(detail || "No se pudo cerrar la sesión");
+    throw new Error(detail || ErrorMessages.logoutError);
     // https://docs.allauth.org/_allauth/{client}/v1/auth/session
 }
 
@@ -293,7 +289,7 @@ export async function sendRecoveryEmail(email: string) {
     );
     if (!response.ok) {
         const detail = await parseDetail(response);
-        throw new Error(detail || "Error al recuperar contrase�a");
+        throw new Error(detail || ErrorMessages.recoveryError);
     }
     // https://docs.allauth.org/_allauth/browser/v1/auth/password/request
 }

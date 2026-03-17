@@ -129,7 +129,7 @@ export function NeosViewContent({
                 <div>
                     <div className="form-group mb-3 col-6 col-lg-2">
                         <label htmlFor="page">
-                            NÃºmero de pÃ¡gina (entre {MIN_NEOS_PAGE} y {" "}
+                            Número de página (entre {MIN_NEOS_PAGE} y {" "}
                             {MAX_NEOS_PAGE}):
                         </label>
                         <input

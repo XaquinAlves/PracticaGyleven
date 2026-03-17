@@ -1,4 +1,5 @@
-﻿import ApiHelper from  "~/common/ApiHelper";
+import ApiHelper from  "~/common/ApiHelper";
+import { ErrorMessages } from "~/common/messageCatalog";
 
 export interface FileProps {
     name: string;
@@ -72,7 +73,7 @@ export async function fetchMediaTree() {
         credentials: "include",
     });
     if (!response.ok) {
-        throw new Error(response.statusText || "No se pudo cargar el árbol de media");
+        throw new Error(response.statusText || ErrorMessages.mediaError);
     }
     const data: ApiEntry[] = await response.json();
     return data.map(normalizeEntry);
@@ -87,7 +88,7 @@ export async function fetchImportantFiles() {
         },
     );
     if (!response.ok) {
-        throw new Error("No se pudieron cargar los archivos importantes");
+        throw new Error(ErrorMessages.genericFetch);
     }
     const data: ImportantFile[] = await response.json();
     return data.filter((file) => file.is_important);
@@ -103,7 +104,7 @@ export async function fetchMediaTreeVersion() {
         },
     );
     if (!response.ok) {
-        throw new Error(response.statusText || "No se pudo verificar versión del árbol");
+        throw new Error(response.statusText || ErrorMessages.genericFetch);
     }
     const data = await response.json();
     return data.tree_version ?? "";
@@ -130,7 +131,7 @@ export async function toggleImportantFile(
 
     if (!response.ok) {
         const message =
-            data?.detail || response.statusText || "Error al alternar favorito";
+            data?.detail || response.statusText || ErrorMessages.toggleImportant;
         throw new Error(message);
     }
 

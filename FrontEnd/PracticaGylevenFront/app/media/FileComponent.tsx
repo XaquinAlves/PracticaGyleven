@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FileProps } from "./MediaModel";
 import ApiHelper from "~/common/ApiHelper";
+import ErrorAlert from "~/common/ErrorAlert";
 import { ErrorMessages } from "~/common/messageCatalog";
 
 interface FileComponentProps {
@@ -42,8 +43,10 @@ export default function FileComponent({
     onToggleImportant,
 }: FileComponentProps) {
     const [isFetching, setIsFetching] = useState(false);
+    const [downloadError, setDownloadError] = useState("");
 
     const handleFetchFile = async () => {
+        setDownloadError("");
         setIsFetching(true);
         try {
             const url = `${ApiHelper.API_URL}/registros/media/download/?path=${encodeURIComponent(
@@ -73,7 +76,7 @@ export default function FileComponent({
             setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
         } catch (err) {
             console.error(err);
-            alert(ErrorMessages.downloadFallback);
+            setDownloadError(ErrorMessages.downloadFallback);
         } finally {
             setIsFetching(false);
         }
@@ -109,6 +112,17 @@ export default function FileComponent({
                     {isFetching ? "Cargando..." : "Abrir/Descargar"}
                 </button>
             </div>
+            {downloadError ? (
+                <div className="mt-2 w-100">
+                    <ErrorAlert
+                        message={downloadError}
+                        onRetry={() => {
+                            setDownloadError("");
+                            void handleFetchFile();
+                        }}
+                    />
+                </div>
+            ) : null}
         </li>
     );
 }

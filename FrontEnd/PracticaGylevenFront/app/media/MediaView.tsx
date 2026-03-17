@@ -2,6 +2,7 @@ import Sidebar from "~/common/Sidebar";
 import DirectoryComponent from "./DirectoryComponent";
 import MediaUploadForm from "./MediaUploadForm";
 import ErrorAlert from "~/common/ErrorAlert";
+import { ErrorMessages } from "~/common/messageCatalog";
 import { MediaProvider, useMedia } from "./useMedia";
 
 export default function MediaView() {
@@ -38,13 +39,14 @@ function MediaViewContent() {
                             <span className="visually-hidden">Cargando...</span>
                         </div>
                     ) : error ? (
-                        <ErrorAlert message={error} onRetry={handleChanges} />
+                        <ErrorAlert
+                            message={error || ErrorMessages.genericFetch}
+                            onRetry={handleChanges}
+                        />
                     ) : directories ? (
                         <DirectoryComponent directory={directories} />
                     ) : (
-                        <p className="text-muted">
-                            No se han cargado los datos todavía.
-                        </p>
+                        <p className="text-muted">{ErrorMessages.mediaEmpty}</p>
                     )}
                 </div>
             </div>

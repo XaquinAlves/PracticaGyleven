@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type SetStateAction } from "react";
 import { type DirectoryProps } from "./MediaModel";
 import ApiHelper from "~/common/ApiHelper";
+import { ErrorMessages } from "~/common/messageCatalog";
 import { useMedia } from "./useMedia";
 import { publishMediaTreeUpdate } from "./mediaUpdates";
 
@@ -83,24 +84,24 @@ export default function MediaUploadForm({
             ? `${selectedPath}/${sanitized}`
             : sanitized;
         if (createdPath.length > 100) {
-            setDirError("El nombre de carpeta es demasiado largo (máx. 100 caracteres).");
+            setDirError(ErrorMessages.directoryNameTooLong);
             return;
         }
         if (availablePaths.includes(createdPath)) {
-            setDirError("La carpeta ya existe.");
+            setDirError(ErrorMessages.directoryAlreadyExists);
             return;
         }
         setDirError("");
         setSelectedPath(createdPath);
         setNewDirectory("");
         onChange();
-        setMessage(`Se usará la carpeta ${createdPath}`);
+        setMessage(ErrorMessages.directoryCreated(createdPath));
     };
 
     const upload = async () => {
         setMessage("");
         if (!files?.length) {
-            setMessage("Selecciona al menos un archivo.");
+            setMessage(ErrorMessages.filesRequired);
             return;
         }
 
@@ -124,20 +125,20 @@ export default function MediaUploadForm({
             );
 
             if (!response.ok) {
-                throw new Error("La subida devolviÃ³ " + response.status);
+                throw new Error(ErrorMessages.uploadError);
             }
 
             const saved = await response.json();
             setStatus("done");
             setFiles(null);
-            setMessage(`Subidos ${saved.length} archivos en ${selectedLabel}`);
+            setMessage(ErrorMessages.uploadSuccess(saved.length, selectedLabel));
             publishMediaTreeUpdate();
 
             onUploadSuccess?.();
         } catch (error) {
             console.error(error);
             setStatus("error");
-            setMessage("Hubo un error al subir los archivos.");
+            setMessage(ErrorMessages.uploadError);
         }
     };
 
@@ -230,3 +231,4 @@ export default function MediaUploadForm({
         </div>
     );
 }
+

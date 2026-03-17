@@ -8,6 +8,7 @@ import {
     useState,
 } from "react";
 import { type InvoiceProps, fetchInvoices } from "./InvoicesModel";
+import { ErrorMessages } from "~/common/messageCatalog";
 
 interface InvoicesContextValue {
     invoices: InvoiceProps[];
@@ -36,7 +37,7 @@ export function InvoicesProvider({
             const fetched = await fetchInvoices();
             setInvoices(fetched);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Error al cargar las facturas");
+            setError(err instanceof Error ? err.message : ErrorMessages.invoicesFetch);
             setInvoices([]);
             throw err;
         } finally {

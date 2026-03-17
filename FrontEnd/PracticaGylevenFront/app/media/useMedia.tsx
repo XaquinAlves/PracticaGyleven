@@ -15,6 +15,7 @@ import {
     fetchMediaTreeVersion,
 } from "./MediaModel";
 import { subscribeMediaTreeUpdates } from "./mediaUpdates";
+import { ErrorMessages } from "~/common/messageCatalog";
 
 interface MediaContextValue {
     directories?: DirectoryProps;
@@ -50,7 +51,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
             const version = await fetchMediaTreeVersion();
             setTreeVersion(version);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Error al cargar medios");
+            setError(err instanceof Error ? err.message : ErrorMessages.mediaError);
             throw err;
         } finally {
             setLoading(false);

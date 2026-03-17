@@ -1,4 +1,5 @@
 import ApiHelper from "~/common/ApiHelper";
+import { ErrorMessages } from "~/common/messageCatalog";
 
 export interface InvoiceProps {
     name: string;
@@ -24,7 +25,7 @@ export async function fetchInvoices() {
         },
     );
     if (!response.ok) {
-        throw new Error(response.statusText || "Error al obtener la lista de facturas");
+        throw new Error(response.statusText || ErrorMessages.invoicesFetch);
     }
     return (await response.json()) as InvoiceProps[];
 }

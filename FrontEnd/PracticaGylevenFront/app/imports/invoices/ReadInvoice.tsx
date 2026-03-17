@@ -1,6 +1,7 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import ApiHelper from "~/common/ApiHelper";
 import ErrorAlert from "~/common/ErrorAlert";
+import { ErrorMessages } from "~/common/messageCatalog";
 
 interface ReadInvoicesProps {
     onUploadSuccess?: () => void;
@@ -25,7 +26,7 @@ export default function ReadInvoices({
     const upload = async () => {
         if (!files?.length) {
             setMessage("");
-            setErrorMessage("Selecciona al menos un archivo.");
+            setErrorMessage(ErrorMessages.filesRequired);
             setStatus("error");
             return;
         }
@@ -50,11 +51,11 @@ export default function ReadInvoices({
                 },
             );
             if (!response.ok) {
-                throw new Error(`La subida devolvió ${response.status}`);
+                throw new Error(ErrorMessages.invoiceUploadError);
             }
             setStatus("done");
             setFiles(null);
-            setMessage("Subida completada.");
+            setMessage(ErrorMessages.invoiceUploadSuccess);
             onUploadSuccess?.();
         } catch (error) {
             console.error(error);
