@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 import type { NavigateFunction } from "react-router";
 import { getSession } from "~/routes/home";
 import ApiHelper from "~/common/ApiHelper";
@@ -95,7 +95,7 @@ export async function get_username() {
 }
 
 export async function changePass(
-    event: React.SubmitEvent<HTMLFormElement>,
+    event: React.FormEvent<HTMLFormElement>,
     oldPassword: string,
     newPassword: string,
     repeatPassword: string,
@@ -138,7 +138,7 @@ export async function changePass(
 }
 
 export async function resetPass(
-    event: React.SubmitEvent<HTMLFormElement>,
+    event: React.FormEvent<HTMLFormElement>,
     password: string,
     repeatPassword: string,
     key: string,
