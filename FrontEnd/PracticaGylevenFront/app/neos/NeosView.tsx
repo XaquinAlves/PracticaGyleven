@@ -1,6 +1,6 @@
 import Sidebar from "~/common/Sidebar";
 import NeosTable from "./Neo";
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import ErrorAlert from "~/common/ErrorAlert";
 import {
     NeosProvider,
@@ -30,12 +30,39 @@ function NeosViewContent() {
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
+    const [pageInput, setPageInput] = useState(page.toString());
+    const [pageError, setPageError] = useState("");
 
     const handlePageChange = (event: ChangeEvent<HTMLInputElement>) => {
-        const value = Number(event.target.value);
-        const nextPage = Number.isNaN(value) || value < 0 ? 0 : value;
-        setPage(nextPage);
+        const rawValue = event.target.value;
+        setPageInput(rawValue);
+
+        if (!rawValue.trim()) {
+            setPageError("Introduce un número de página.");
+            return;
+        }
+
+        if (!/^-?\\d+$/.test(rawValue)) {
+            setPageError("Solo se permiten enteros.");
+            return;
+        }
+
+        const numericValue = Number(rawValue);
+
+        if (numericValue < MIN_NEOS_PAGE || numericValue > MAX_NEOS_PAGE) {
+            setPageError(
+                `El valor debe estar entre ${MIN_NEOS_PAGE} y ${MAX_NEOS_PAGE}.`,
+            );
+            return;
+        }
+
+        setPageError("");
+        setPage(numericValue);
     };
+
+    useEffect(() => {
+        setPageInput(page.toString());
+    }, [page]);
 
     const handleSave = async () => {
         setSaving(true);
@@ -70,10 +97,15 @@ function NeosViewContent() {
                             name="page"
                             min={MIN_NEOS_PAGE}
                             max={MAX_NEOS_PAGE}
-                            value={page}
+                            value={pageInput}
                             onChange={handlePageChange}
                             inputMode="numeric"
                         />
+                        {pageError && (
+                            <div className="text-danger small mt-1">
+                                {pageError}
+                            </div>
+                        )}
                     </div>
                 </div>
 

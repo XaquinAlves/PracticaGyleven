@@ -596,6 +596,28 @@ def media_tree_version(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+def _parse_block_size(
+    raw_block: str | None,
+    default_block: int,
+    max_block_size: int,
+) -> tuple[int, Response | None]:
+    if raw_block is None:
+        return default_block, None
+    try:
+        block_size = int(raw_block)
+    except ValueError:
+        return 0, _json_error(
+            "block_size debe ser un entero válido",
+            status.HTTP_400_BAD_REQUEST,
+        )
+    if block_size < 1 or block_size > max_block_size:
+        return 0, _json_error(
+            f"block_size debe estar entre 1 y {max_block_size}",
+            status.HTTP_400_BAD_REQUEST,
+        )
+    return block_size, None
+
+
 def download_media_file(request):
     #Obtiene el parametro de la ruta del archivo a descargar, y comprueba que es válido
     relative_path = request.query_params.get("path")
@@ -624,13 +646,13 @@ def download_media_file(request):
     raw_block = request.query_params.get("block_size")
     default_block = getattr(settings, "MEDIA_DOWNLOAD_BLOCK_SIZE", 64 * 1024)
     max_block_size = getattr(settings, "MEDIA_DOWNLOAD_BLOCK_SIZE_MAX", 512 * 1024)
-
-    try:
-        block_size = int(raw_block) if raw_block is not None else default_block
-    except ValueError:
-        block_size = default_block
-
-    block_size = max(1, min(block_size, max_block_size))
+    block_size, validation_error = _parse_block_size(
+        raw_block,
+        default_block,
+        max_block_size,
+    )
+    if validation_error:
+        return validation_error
 
     #Construimos la respuesta
     response = FileResponse(

@@ -3,6 +3,32 @@ import type { NavigateFunction } from "react-router";
 import { getSession } from "~/routes/home";
 import ApiHelper from "~/common/ApiHelper";
 
+const PASSWORD_RULES = [
+    "mínimo 8 caracteres",
+    "una letra mayúscula",
+    "una letra minúscula",
+    "un número",
+    "un símbolo especial",
+];
+
+function ensurePasswordStrength(password: string) {
+    if (password.length < 8) {
+        throw new Error("La contraseña debe tener al menos 8 caracteres.");
+    }
+    if (!/[A-Z]/.test(password)) {
+        throw new Error("La contraseña debe incluir al menos una letra mayúscula.");
+    }
+    if (!/[a-z]/.test(password)) {
+        throw new Error("La contraseña debe incluir al menos una letra minúscula.");
+    }
+    if (!/[0-9]/.test(password)) {
+        throw new Error("La contraseña debe incluir al menos un número.");
+    }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+        throw new Error("La contraseña debe incluir al menos un símbolo especial.");
+    }
+}
+
 async function parseDetail(response: Response) {
     try {
         const data = await response.json();
@@ -72,6 +98,9 @@ export async function changePass(
 
     if (newPassword !== repeatPassword) {
         throw new Error("Las contraseñas no coinciden");
+    }
+
+    ensurePasswordStrength(newPassword);
     } else {
         try {
             await ApiHelper.ensureCSRF();
@@ -111,6 +140,9 @@ export async function resetPass(
   event.preventDefault();
   if (password !== repeatPassword) {
         throw new Error("Las contraseñas no coinciden");
+  }
+
+  ensurePasswordStrength(password);
   } else {
       try {
           await ApiHelper.ensureCSRF();
