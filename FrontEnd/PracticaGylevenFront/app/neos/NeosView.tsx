@@ -1,13 +1,15 @@
-import Sidebar from "~/common/Sidebar";
+﻿import Sidebar from "~/common/Sidebar";
 import NeosTable from "./Neo";
 import { useEffect, useState, type ChangeEvent } from "react";
 import ErrorAlert from "~/common/ErrorAlert";
 import {
+    type NeosContextValue,
     NeosProvider,
     useNeos,
     MIN_NEOS_PAGE,
     MAX_NEOS_PAGE,
 } from "./useNeos";
+import { getNeosViewPhase } from "./neosViewState";
 
 export default function NeosView() {
     return (
@@ -17,7 +19,13 @@ export default function NeosView() {
     );
 }
 
-function NeosViewContent() {
+type UseNeosHook = () => NeosContextValue;
+
+export function NeosViewContent({
+    useNeosHook = useNeos,
+}: {
+    useNeosHook?: UseNeosHook;
+}) {
     const {
         neos,
         loading,
@@ -26,7 +34,7 @@ function NeosViewContent() {
         setPage,
         refresh,
         saveToDatabase,
-    } = useNeos();
+    } = useNeosHook();
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
@@ -38,7 +46,7 @@ function NeosViewContent() {
         setPageInput(rawValue);
 
         if (!rawValue.trim()) {
-            setPageError("Introduce un número de página.");
+            setPageError("Introduce un nÃºmero de pÃ¡gina.");
             return;
         }
 
@@ -80,6 +88,41 @@ function NeosViewContent() {
         }
     };
 
+    const phase = getNeosViewPhase({ loading, error, neos });
+    let content;
+
+    if (phase === "loading") {
+        content = (
+            <div className="spinner-border text-center" role="status">
+                <span className="visually-hidden">Cargando...</span>
+            </div>
+        );
+    } else if (phase === "error") {
+        content = <ErrorAlert message={error} onRetry={refresh} />;
+    } else if (phase === "data" && neos) {
+        content = (
+            <>
+                <NeosTable
+                    neos={neos.neos}
+                    onSave={handleSave}
+                    saving={saving}
+                />
+                {successMessage && <p className="text-success">{successMessage}</p>}
+                {saveError && (
+                    <ErrorAlert
+                        className="mt-3"
+                        message={saveError}
+                        onRetry={handleSave}
+                    />
+                )}
+            </>
+        );
+    } else {
+        content = (
+            <p className="text-muted">No se han cargado los datos todavÃ­a.</p>
+        );
+    }
+
     return (
         <div className="row">
             <Sidebar />
@@ -87,7 +130,7 @@ function NeosViewContent() {
                 <div>
                     <div className="form-group mb-3 col-6 col-lg-2">
                         <label htmlFor="page">
-                            Número de página (entre {MIN_NEOS_PAGE} y{" "}
+                            NÃºmero de pÃ¡gina (entre {MIN_NEOS_PAGE} y {" "}
                             {MAX_NEOS_PAGE}):
                         </label>
                         <input
@@ -109,42 +152,7 @@ function NeosViewContent() {
                     </div>
                 </div>
 
-                <div className="col-12 col-md-12 mt-5">
-                    {loading ? (
-                        <div
-                            className="spinner-border text-center"
-                            role="status"
-                        >
-                            <span className="visually-hidden">Cargando...</span>
-                        </div>
-                    ) : error ? (
-                        <ErrorAlert message={error} onRetry={refresh} />
-                    ) : neos ? (
-                        <>
-                            <NeosTable
-                                neos={neos.neos}
-                                onSave={handleSave}
-                                saving={saving}
-                            />
-                            {successMessage && (
-                                <p className="text-success">
-                                    {successMessage}
-                                </p>
-                            )}
-                            {saveError && (
-                                <ErrorAlert
-                                    className="mt-3"
-                                    message={saveError}
-                                    onRetry={handleSave}
-                                />
-                            )}
-                        </>
-                    ) : (
-                        <p className="text-muted">
-                            No se han cargado los datos todavía.
-                        </p>
-                    )}
-                </div>
+                <div className="col-12 col-md-12 mt-5">{content}</div>
             </div>
         </div>
     );

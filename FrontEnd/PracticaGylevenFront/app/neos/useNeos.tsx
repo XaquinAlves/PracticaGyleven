@@ -9,7 +9,7 @@ import {
 } from "react";
 import { type NeosResponse, fetchNeos, saveNeos } from "./NeosModel";
 
-interface NeosContextValue {
+export interface NeosContextValue {
     neos: NeosResponse | null;
     loading: boolean;
     error: string;

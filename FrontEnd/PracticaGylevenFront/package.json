@@ -7,7 +7,7 @@
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
-    "test": "npx ts-node --esm scripts/mediaUpdates.test.ts"
+    "test": "npx ts-node --esm scripts/mediaUpdates.test.ts && npx ts-node --esm scripts/neosViewState.test.ts"
   },
   "dependencies": {
     "@react-router/node": "7.12.0",
