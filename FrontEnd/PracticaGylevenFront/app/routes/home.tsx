@@ -1,6 +1,7 @@
 import ApiHelper from "~/common/ApiHelper";
 import type { Route } from "./+types/home";
 import Inicio from "~/Inicio";
+import { ErrorMessages } from "~/common/messageCatalog";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -45,7 +46,7 @@ export async function getSession() {
         }
     } catch (err) {
         console.error(err);
-        alert("Error de red al verificar la sesión.");
+        alert(ErrorMessages.sessionCheckFailed);
         return false;
     }
     // https://docs.allauth.org/_allauth/{client}/v1/auth/session

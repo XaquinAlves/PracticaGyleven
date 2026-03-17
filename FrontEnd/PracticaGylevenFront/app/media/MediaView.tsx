@@ -13,7 +13,7 @@ export default function MediaView() {
     );
 }
 
-function MediaViewContent() {
+export function MediaViewContent() {
     const { directories, loading, error, refresh } = useMedia();
 
     const handleChanges = () => {

@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router";
 import { login, loginGoogle } from "./SessionController";
 import { useState, type FormEvent } from "react";
+import { ErrorMessages } from "~/common/messageCatalog";
 import ErrorAlert from "~/common/ErrorAlert";
 let username = "";
 let password = "";
@@ -14,7 +15,11 @@ export default function Login() {
             setError("");
             await login(event, username, password, navigate);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Error en el login");
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : ErrorMessages.loginGenericError,
+            );
         }
     };
 

@@ -13,7 +13,7 @@ export default function InvoicesView() {
     );
 }
 
-function InvoicesViewContent() {
+export function InvoicesViewContent() {
     const { invoices, loading, error, refresh } = useInvoices();
     const handleRefresh = () => {
         void refresh();

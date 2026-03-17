@@ -11,8 +11,7 @@ export const ErrorMessages = {
     mediaEmpty: "No se han cargado los datos todavía.",
     importantFilesEmpty: "No hay archivos marcados como importantes.",
     mediaUploadSuccess: "Archivo subido correctamente.",
-    mediaUploadFailure:
-        "No se pudo subir el archivo. Revisa la carpeta seleccionada.",
+    mediaUploadFailure: "No se pudo subir el archivo. Revisa la carpeta seleccionada.",
     mediaUploadFolderRequired: "Debes seleccionar una carpeta antes de subir.",
     invoicesFetch: "Error al obtener la lista de facturas.",
     invoicesEmpty: "No hay facturas registradas.",
@@ -25,11 +24,12 @@ export const ErrorMessages = {
     passwordChangeError: "No se pudo cambiar la contraseña.",
     passwordResetError: "No se pudo restablecer la contraseña.",
     invalidCredentials: "Usuario y/o contraseña incorrectos.",
+    loginGenericError: "Error en el login.",
     twoFaError: "Código 2FA incorrecto.",
     logoutError: "No se pudo cerrar la sesión.",
     recoveryError: "No se pudo enviar el correo de recuperación.",
-    recoverySent:
-        "Correo de recuperación enviado. Revisa tu bandeja de entrada.",
+    recoverySent: "Correo de recuperación enviado. Revisa tu bandeja de entrada.",
+    sessionCheckFailed: "Error de red al verificar la sesión.",
     mediaError: "Error al cargar los datos de media.",
     directoryNameTooLong: "El nombre de carpeta es demasiado largo (máx. 100 caracteres).",
     directoryAlreadyExists: "La carpeta ya existe.",
@@ -39,4 +39,3 @@ export const ErrorMessages = {
     uploadSuccess: (count: number, pathLabel: string) =>
         `Subidos ${count} archivos en ${pathLabel}`,
 };
-
