@@ -61,6 +61,7 @@ export default class NeosModel {
         } catch (err) {
             console.error(err);
             alert("Error al guardar los datos.");
+            throw err;
         }
     };
 }

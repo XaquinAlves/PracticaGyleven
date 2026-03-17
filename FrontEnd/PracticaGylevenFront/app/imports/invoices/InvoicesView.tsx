@@ -12,19 +12,23 @@ export default function InvoicesView() {
     const [error, setError] = useState<string>("");
 
     useEffect(() => {
-        if (cargando) {
+        if (!cargando) {
+            return;
+        }
+
+        const loadInvoices = async () => {
+            setError("");
             try {
-                setError("");
-                InvoicesModel.fetchInvoices().then(() => {
-                    setCargando(false);
-                });
+                await InvoicesModel.fetchInvoices();
             } catch (err) {
                 setError(err instanceof Error ? err.message : String(err));
             } finally {
                 setCargando(false);
             }
-        }
-    }, []);
+        };
+
+        void loadInvoices();
+    }, [cargando]);
 
     return (
         <div className="row">

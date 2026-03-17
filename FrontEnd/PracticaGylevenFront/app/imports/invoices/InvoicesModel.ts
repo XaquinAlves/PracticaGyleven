@@ -34,7 +34,8 @@ export default class InvoicesModel {
             }
         } catch (err) {
             console.error(err);
-            alert("Error de red al obtener la lista de facturas")
+            alert("Error de red al obtener la lista de facturas");
+            throw err;
         }
     }
 }

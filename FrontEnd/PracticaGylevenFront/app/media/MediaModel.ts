@@ -60,11 +60,12 @@ export default class MediaModel {
                 } else {
                     throw Error(response.statusText);
                 }
-            } catch (err) {
-                MediaModel.directoriesPromise = null;
-                console.error(err);
-                alert("Error de red al obtener los directorios");
-            }
+        } catch (err) {
+            MediaModel.directoriesPromise = null;
+            console.error(err);
+            alert("Error de red al obtener los directorios");
+            throw err;
+        }
         })();
 
         return MediaModel.directoriesPromise;
@@ -96,13 +97,14 @@ export default class MediaModel {
                     console.log(response.statusText);
                     throw new Error(response.statusText);
                 }
-            } catch (err) {
-                MediaModel.importantFilesPromise = null;
-                console.error(err);
-                alert(
-                    "No se pudieron cargar los archivos marcados como importantes",
-                );
-            }
+        } catch (err) {
+            MediaModel.importantFilesPromise = null;
+            console.error(err);
+            alert(
+                "No se pudieron cargar los archivos marcados como importantes",
+            );
+            throw err;
+        }
         })();
 
         return MediaModel.importantFilesPromise;

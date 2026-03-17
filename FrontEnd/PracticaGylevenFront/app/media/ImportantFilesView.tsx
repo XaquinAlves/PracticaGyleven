@@ -6,18 +6,30 @@ import MediaModel, {
 import Sidebar from "~/common/Sidebar";
 
 export default function ImportantFilesView() {
-    const [cargando, setCargando] = useState<boolean>();
+    const [cargando, setCargando] = useState<boolean>(true);
+    const [error, setError] = useState<string>("");
 
     useEffect(() => {
-        if (cargando === undefined) {
-            MediaModel.loadImportantPaths({
-                force: MediaModel.forceFetch,
-            }).then(() => {
-                MediaModel.forceFetch = false;
-                setCargando(false);
-            });
+        if (!cargando) {
+            return;
         }
-    }, []);
+
+        const loadImportantFiles = async () => {
+            setError("");
+            try {
+                await MediaModel.loadImportantPaths({
+                    force: MediaModel.forceFetch,
+                });
+                MediaModel.forceFetch = false;
+            } catch (err) {
+                setError(err instanceof Error ? err.message : String(err));
+            } finally {
+                setCargando(false);
+            }
+        };
+
+        void loadImportantFiles();
+    }, [cargando]);
 
     return (
         <div className="row">
@@ -30,6 +42,17 @@ export default function ImportantFilesView() {
                             role="status"
                         >
                             <span className="visually-hidden">Cargando...</span>
+                        </div>
+                    ) : error ? (
+                        <div className="alert alert-danger">
+                            {error}
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-primary ms-3"
+                                onClick={() => setCargando(true)}
+                            >
+                                Reintentar
+                            </button>
                         </div>
                     ) : (
                         <ImportantFilesTable

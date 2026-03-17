@@ -18,26 +18,30 @@ export default function MediaView() {
     const [error, setError] = useState<string>("");
 
     useEffect(() => {
-        if (cargando) {
+        if (!cargando) {
+            return;
+        }
+
+        const loadMedia = async () => {
+            setError("");
             try {
-                setError("");
-                MediaModdel.fetchDirectories().then(() => {
-                    MediaModel.loadImportantPaths().then(() => {
-                        let importantSet = new Set<string>();
-                        MediaModdel.important_files.forEach((file) => {
-                            if (file.is_important) {
-                                importantSet.add(file.relative_path);
-                            }
-                        });
-                        setImportantPaths(importantSet);
-                    });
+                await MediaModdel.fetchDirectories();
+                await MediaModel.loadImportantPaths();
+                const importantSet = new Set<string>();
+                (MediaModdel.important_files || []).forEach((file) => {
+                    if (file.is_important) {
+                        importantSet.add(file.relative_path);
+                    }
                 });
+                setImportantPaths(importantSet);
             } catch (err) {
                 setError(err instanceof Error ? err.message : String(err));
             } finally {
                 setCargando(false);
             }
-        }
+        };
+
+        void loadMedia();
     }, [cargando]);
 
     const handleToggleImportant = async (
