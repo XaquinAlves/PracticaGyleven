@@ -20,7 +20,7 @@ export function Invoice({
     );
 }
 
-export default function InvoicesTable({ ...invoices }: InvoiceTableProps) {
+export default function InvoicesTable({ invoices }: InvoiceTableProps) {
     return (
         <table className="table table-striped table-bordered">
             <thead>
@@ -34,7 +34,7 @@ export default function InvoicesTable({ ...invoices }: InvoiceTableProps) {
                 </tr>
             </thead>
             <tbody>
-                {invoices.invoices.map((invoice) => (
+                {invoices.map((invoice) => (
                     <Invoice
                         name={invoice.name}
                         page_count={invoice.page_count}

@@ -1,56 +1,40 @@
 import Sidebar from "~/common/Sidebar";
 import ReadInvoices from "./ReadInvoice";
-import { useEffect, useState } from "react";
 import InvoicesTable from "./Invoice";
-import InvoicesModel from "./InvoicesModel";
 import ErrorAlert from "~/common/ErrorAlert";
+import { InvoicesProvider, useInvoices } from "./useInvoices";
 
 export default function InvoicesView() {
-    const [cargando, setCargando] = useState<boolean>(
-        InvoicesModel.invoices === undefined,
+    return (
+        <InvoicesProvider>
+            <InvoicesViewContent />
+        </InvoicesProvider>
     );
+}
 
-    const [error, setError] = useState<string>("");
-
-    useEffect(() => {
-        if (!cargando) {
-            return;
-        }
-
-        const loadInvoices = async () => {
-            setError("");
-            try {
-                await InvoicesModel.fetchInvoices();
-            } catch (err) {
-                setError(err instanceof Error ? err.message : String(err));
-            } finally {
-                setCargando(false);
-            }
-        };
-
-        void loadInvoices();
-    }, [cargando]);
+function InvoicesViewContent() {
+    const { invoices, loading, error, refresh } = useInvoices();
+    const handleRefresh = () => {
+        void refresh();
+    };
 
     return (
         <div className="row">
             <Sidebar />
             <div className="row justify-content-center col-9 col-lg-10">
-                <ReadInvoices setCargando={setCargando} />
+                <ReadInvoices onUploadSuccess={handleRefresh} />
                 <div className="col-12 col-md-12 mt-5">
-                    {cargando ? (
+                    {loading ? (
                         <div
                             className="spinner-border text-center"
                             role="status"
                         >
                             <span className="visually-hidden">Cargando...</span>
                         </div>
-                    ) : InvoicesModel.invoices ? (
-                        <InvoicesTable invoices={InvoicesModel.invoices} />
                     ) : error ? (
-                        <ErrorAlert
-                            message={error}
-                            onRetry={() => setCargando(true)}
-                        />
+                        <ErrorAlert message={error} onRetry={handleRefresh} />
+                    ) : invoices.length ? (
+                        <InvoicesTable invoices={invoices} />
                     ) : (
                         <p className="text-muted">
                             No se han cargado los datos todavía.

@@ -1,12 +1,13 @@
 import { useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
 import ApiHelper from "~/common/ApiHelper";
 
 interface ReadInvoicesProps {
-    setCargando: Dispatch<SetStateAction<boolean>>;
+    onUploadSuccess?: () => void;
 }
 
-export default function ReadInvoices({ setCargando }: ReadInvoicesProps) {
+export default function ReadInvoices({
+    onUploadSuccess,
+}: ReadInvoicesProps) {
     const [files, setFiles] = useState<FileList | null>(null);
     const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">(
         "idle",
@@ -40,7 +41,7 @@ export default function ReadInvoices({ setCargando }: ReadInvoicesProps) {
             }
             setStatus("done");
             setFiles(null);
-            setCargando(true);
+            onUploadSuccess?.();
         } catch (error) {
             console.error(error);
             setStatus("error");
