@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import ApiHelper from "~/common/ApiHelper";
 import ErrorAlert from "~/common/ErrorAlert";
 import { useMedia } from "./useMedia";
+import { publishMediaTreeUpdate } from "./mediaUpdates";
 
 interface DirectoryComponentProps {
     directory?: DirectoryProps;
@@ -53,8 +54,9 @@ export default function DirectoryComponent({
                     );
                 }
 
-                void refresh();
-            } catch (err) {
+            await refresh();
+            publishMediaTreeUpdate();
+        } catch (err) {
                 const message =
                     err instanceof Error
                         ? err.message

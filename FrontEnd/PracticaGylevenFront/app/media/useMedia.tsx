@@ -14,6 +14,7 @@ import {
     fetchMediaTree,
     fetchMediaTreeVersion,
 } from "./MediaModel";
+import { subscribeMediaTreeUpdates } from "./mediaUpdates";
 
 interface MediaContextValue {
     directories?: DirectoryProps;
@@ -76,6 +77,16 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         }, 15000);
         return () => clearInterval(intervalId);
     }, [loading, loadMedia, treeVersion]);
+
+    useEffect(() => {
+        const unsubscribe = subscribeMediaTreeUpdates(() => {
+            if (loading) {
+                return;
+            }
+            void loadMedia();
+        });
+        return unsubscribe;
+    }, [loading, loadMedia]);
 
     const value = useMemo(
         () => ({

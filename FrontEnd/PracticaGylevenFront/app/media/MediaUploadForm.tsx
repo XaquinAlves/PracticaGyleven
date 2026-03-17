@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type SetStateAction } from "react";
 import { type DirectoryProps } from "./MediaModel";
 import ApiHelper from "~/common/ApiHelper";
 import { useMedia } from "./useMedia";
+import { publishMediaTreeUpdate } from "./mediaUpdates";
 
 interface MediaUploadFormProps {
     onUploadSuccess?: () => void;
@@ -120,6 +121,7 @@ export default function MediaUploadForm({
             setStatus("done");
             setFiles(null);
             setMessage(`Subidos ${saved.length} archivos en ${selectedLabel}`);
+            publishMediaTreeUpdate();
 
             onUploadSuccess?.();
         } catch (error) {
