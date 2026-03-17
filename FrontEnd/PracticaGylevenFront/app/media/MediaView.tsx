@@ -1,6 +1,5 @@
 import Sidebar from "~/common/Sidebar";
 import { useEffect, useState } from "react";
-import MediaModdel from "./MediaModel";
 import DirectoryComponent from "./DirectoryComponent";
 import MediaUploadForm from "./MediaUploadForm";
 import MediaModel from "./MediaModel";
@@ -12,7 +11,7 @@ export default function MediaView() {
     );
 
     const [cargando, setCargando] = useState<boolean>(
-        MediaModdel.directories === undefined || importantPaths.size === 0,
+        MediaModel.directories === undefined || importantPaths.size === 0,
     );
 
     const [error, setError] = useState<string>("");
@@ -25,10 +24,12 @@ export default function MediaView() {
         const loadMedia = async () => {
             setError("");
             try {
-                await MediaModdel.fetchDirectories();
-                await MediaModel.loadImportantPaths();
+                await MediaModel.fetchDirectories({force: MediaModel.forceFetch});
+                await MediaModel.loadImportantPaths({
+                    force: MediaModel.forceFetch,
+                });
                 const importantSet = new Set<string>();
-                (MediaModdel.important_files || []).forEach((file) => {
+                (MediaModel.important_files || []).forEach((file) => {
                     if (file.is_important) {
                         importantSet.add(file.relative_path);
                     }
@@ -37,6 +38,7 @@ export default function MediaView() {
             } catch (err) {
                 setError(err instanceof Error ? err.message : String(err));
             } finally {
+                MediaModel.forceFetch = false;
                 setCargando(false);
             }
         };
@@ -68,7 +70,7 @@ export default function MediaView() {
             if (!response.ok) {
                 throw new Error(response.statusText);
             }
-            MediaModdel.forceFetch = true;
+            MediaModel.forceFetch = true;
             setImportantPaths((previous) => {
                 const next = new Set(previous);
                 if (currentlyImportant) {
@@ -86,6 +88,12 @@ export default function MediaView() {
         }
     };
 
+    const handleChanges = () => {
+        MediaModel.forceFetch = true;
+        setError("")
+        setCargando(true)
+    }
+
     return (
         <div className="row">
             <Sidebar />
@@ -93,6 +101,7 @@ export default function MediaView() {
                 <div className="col-12">
                     <MediaUploadForm
                         onUploadSuccess={() => setCargando(true)}
+                        onChange={() => handleChanges()}
                     />
                 </div>
                 <div className="col-12 col-md-12 mt-5">
@@ -103,9 +112,9 @@ export default function MediaView() {
                         >
                             <span className="visually-hidden">Cargando...</span>
                         </div>
-                    ) : MediaModdel.directories ? (
+                    ) : MediaModel.directories ? (
                         <DirectoryComponent
-                            directory={MediaModdel.directories}
+                            directory={MediaModel.directories}
                             importantPaths={importantPaths}
                             onToggleImportant={handleToggleImportant}
                         />
@@ -115,7 +124,7 @@ export default function MediaView() {
                             <button
                                 type="button"
                                 className="btn btn-primary"
-                                onClick={() => setCargando(true)}
+                                onClick={() => handleChanges()}
                             >
                                 Reintentar
                             </button>

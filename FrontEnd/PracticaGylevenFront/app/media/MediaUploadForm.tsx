@@ -1,13 +1,15 @@
-import { useMemo, useState } from "react";
-import Cookies from "js-cookie";
-import MediaModel, {type DirectoryProps } from "./MediaModel";
+import { useEffect, useMemo, useState, type SetStateAction } from "react";
+import MediaModel, { type DirectoryProps } from "./MediaModel";
 import ApiHelper from "~/common/ApiHelper";
 
 interface MediaUploadFormProps {
     onUploadSuccess?: () => void;
+    onChange: () => void;
 }
 
-function isDirectory(entry: DirectoryProps | { type: string }): entry is DirectoryProps {
+function isDirectory(
+    entry: DirectoryProps | { type: string },
+): entry is DirectoryProps {
     return entry.type === "directory";
 }
 
@@ -20,7 +22,9 @@ function buildDirectoryPaths(root?: DirectoryProps): string[] {
     const collect = (node: DirectoryProps, basePath: string) => {
         const children = (node.children ?? []).filter(isDirectory);
         for (const child of children) {
-            const childPath = basePath ? `${basePath}/${child.name}` : child.name;
+            const childPath = basePath
+                ? `${basePath}/${child.name}`
+                : child.name;
             paths.add(childPath);
             collect(child, childPath);
         }
@@ -30,7 +34,10 @@ function buildDirectoryPaths(root?: DirectoryProps): string[] {
     return Array.from(paths);
 }
 
-export default function MediaUploadForm({ onUploadSuccess }: MediaUploadFormProps) {
+export default function MediaUploadForm({
+    onUploadSuccess,
+    onChange,
+}: MediaUploadFormProps) {
     const [files, setFiles] = useState<FileList | null>(null);
     const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">(
         "idle",
@@ -40,7 +47,10 @@ export default function MediaUploadForm({ onUploadSuccess }: MediaUploadFormProp
     const [message, setMessage] = useState<string>("");
 
     const directories = MediaModel.directories;
-    const basePaths = useMemo(() => buildDirectoryPaths(directories), [directories]);
+    const basePaths = useMemo(
+        () => buildDirectoryPaths(directories),
+        [directories],
+    );
     const availablePaths = useMemo(() => {
         const set = new Set(basePaths);
         if (selectedPath && !set.has(selectedPath)) {
@@ -48,6 +58,16 @@ export default function MediaUploadForm({ onUploadSuccess }: MediaUploadFormProp
         }
         return Array.from(set);
     }, [basePaths, selectedPath]);
+
+    useEffect(() => {
+        if (!directories) {
+            return;
+        }
+        const paths = buildDirectoryPaths(directories);
+        if (selectedPath && !paths.includes(selectedPath)) {
+            setSelectedPath("");
+        }
+    }, [directories]);
 
     const selectedLabel = selectedPath ? `/${selectedPath}` : "/";
 
@@ -61,10 +81,12 @@ export default function MediaUploadForm({ onUploadSuccess }: MediaUploadFormProp
             : sanitized;
         setSelectedPath(createdPath);
         setNewDirectory("");
+        onChange();
         setMessage(`Se usará la carpeta ${createdPath}`);
     };
 
     const upload = async () => {
+        setMessage("");
         if (!files?.length) {
             setMessage("Selecciona al menos un archivo.");
             return;
@@ -82,7 +104,7 @@ export default function MediaUploadForm({ onUploadSuccess }: MediaUploadFormProp
                 {
                     method: "POST",
                     headers: {
-                        "X-CSRFToken": ApiHelper.CSRF
+                        "X-CSRFToken": ApiHelper.CSRF,
                     },
                     body: form,
                     credentials: "include",
@@ -97,12 +119,29 @@ export default function MediaUploadForm({ onUploadSuccess }: MediaUploadFormProp
             setStatus("done");
             setFiles(null);
             setMessage(`Subidos ${saved.length} archivos en ${selectedLabel}`);
+
             onUploadSuccess?.();
         } catch (error) {
             console.error(error);
             setStatus("error");
             setMessage("Hubo un error al subir los archivos.");
         }
+    };
+
+    const handleFolderChange = (event: {
+        target: { value: SetStateAction<string> };
+    }) => {
+        setSelectedPath(event.target.value);
+        setMessage("");
+        onChange();
+    };
+
+    const handleFileChange = (event: {
+        target: { files: SetStateAction<FileList | null> };
+    }) => {
+        setFiles(event.target.files);
+        setMessage("");
+        onChange();
     };
 
     return (
@@ -114,7 +153,7 @@ export default function MediaUploadForm({ onUploadSuccess }: MediaUploadFormProp
                     <select
                         className="form-select"
                         value={selectedPath}
-                        onChange={(event) => setSelectedPath(event.target.value)}
+                        onChange={handleFolderChange}
                     >
                         {availablePaths.map((path) => (
                             <option key={path} value={path}>
@@ -129,7 +168,9 @@ export default function MediaUploadForm({ onUploadSuccess }: MediaUploadFormProp
                         className="form-control"
                         placeholder="Nueva carpeta"
                         value={newDirectory}
-                        onChange={(event) => setNewDirectory(event.target.value)}
+                        onChange={(event) =>
+                            setNewDirectory(event.target.value)
+                        }
                     />
                     <button
                         type="button"
@@ -148,7 +189,7 @@ export default function MediaUploadForm({ onUploadSuccess }: MediaUploadFormProp
                         type="file"
                         className="form-control"
                         multiple
-                        onChange={(event) => setFiles(event.target.files)}
+                        onChange={handleFileChange}
                     />
                 </div>
                 <button
