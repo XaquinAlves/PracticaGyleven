@@ -3,6 +3,18 @@ import type { NavigateFunction } from "react-router";
 import { getSession } from "~/routes/home";
 import ApiHelper from "~/common/ApiHelper";
 
+async function parseDetail(response: Response) {
+    try {
+        const data = await response.json();
+        if (data && typeof data.detail === "string") {
+            return data.detail;
+        }
+    } catch (err) {
+        console.error("Could not parse error detail", err);
+    }
+    return response.statusText || "Error del servidor";
+}
+
 export async function whoami() {
     try {
         const response = await fetch(
@@ -79,7 +91,8 @@ export async function changePass(
             if (response.ok) {
                 return;
             } else {
-                throw Error(response.statusText);
+                const detail = await parseDetail(response);
+                throw Error(detail || "No se pudo cambiar la contraseña");
             }
         } catch (err) {
             console.error(err);
@@ -116,7 +129,8 @@ export async function resetPass(
           if (response.ok) {
                 window.location.reload();
           } else {
-              throw Error(response.statusText);
+              const detail = await parseDetail(response);
+              throw Error(detail || "No se pudo restablecer la contraseña");
           }
       } catch (err) {
           console.error(err);
@@ -176,7 +190,8 @@ export async function login(
         }
     }
 
-    throw new Error("Usuario y/o contraseña incorrectos");
+    const detail = await parseDetail(response);
+    throw new Error(detail || "Usuario y/o contraseña incorrectos");
 }
 
 export async function login2fa(
@@ -198,7 +213,8 @@ export async function login2fa(
         },
     );
     if (!response.ok) {
-        throw new Error("Código de autenticación incorrecto");
+        const detail = await parseDetail(response);
+        throw new Error(detail || "Código de autenticación incorrecto");
     }
     await response.json();
     getSession();
@@ -220,7 +236,8 @@ export async function logout() {
         window.location.reload();
         return;
     }
-    throw new Error("No se pudo cerrar la sesión");
+    const detail = await parseDetail(response);
+    throw new Error(detail || "No se pudo cerrar la sesión");
     // https://docs.allauth.org/_allauth/{client}/v1/auth/session
 }
 
@@ -242,7 +259,8 @@ export async function sendRecoveryEmail(
         },
     );
     if (!response.ok) {
-        throw new Error("Error al recuperar contraseña");
+        const detail = await parseDetail(response);
+        throw new Error(detail || "Error al recuperar contraseña");
     }
     // https://docs.allauth.org/_allauth/{client}/v1/auth/password/request
 }

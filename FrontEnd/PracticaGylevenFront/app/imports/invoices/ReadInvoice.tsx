@@ -1,5 +1,6 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import ApiHelper from "~/common/ApiHelper";
+import ErrorAlert from "~/common/ErrorAlert";
 
 interface ReadInvoicesProps {
     onUploadSuccess?: () => void;
@@ -12,17 +13,29 @@ export default function ReadInvoices({
     const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">(
         "idle",
     );
+    const [message, setMessage] = useState("");
+    const [errorMessage, setErrorMessage] = useState("");
 
     const handleFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
         setFiles(event.target.files);
+        setMessage("");
+        setErrorMessage("");
     };
 
     const upload = async () => {
-        if (!files?.length) return;
+        if (!files?.length) {
+            setMessage("");
+            setErrorMessage("Selecciona al menos un archivo.");
+            setStatus("error");
+            return;
+        }
+
         const form = new FormData();
         Array.from(files).forEach((file) => form.append("pdfs", file));
 
         setStatus("sending");
+        setMessage("");
+        setErrorMessage("");
         try {
             await ApiHelper.ensureCSRF();
             const response = await fetch(
@@ -37,15 +50,25 @@ export default function ReadInvoices({
                 },
             );
             if (!response.ok) {
-                throw new Error("La subida devolvió " + response.status);
+                throw new Error(`La subida devolvió ${response.status}`);
             }
             setStatus("done");
             setFiles(null);
+            setMessage("Subida completada.");
             onUploadSuccess?.();
         } catch (error) {
             console.error(error);
             setStatus("error");
+            setErrorMessage(
+                error instanceof Error
+                    ? error.message
+                    : "Hubo un error inesperado al subir las facturas.",
+            );
         }
+    };
+
+    const handleRetry = () => {
+        void upload();
     };
 
     return (
@@ -66,11 +89,15 @@ export default function ReadInvoices({
                 >
                     {status === "sending" ? "Subiendo..." : "Subir PDFs"}
                 </button>
-                {status === "done" && (
-                    <p className="text-success">Subida completada.</p>
+                {message && status !== "error" && (
+                    <p className="text-success mt-3" aria-live="polite">
+                        {message}
+                    </p>
                 )}
-                {status === "error" && (
-                    <p className="text-danger">Hubo un error al subir.</p>
+                {errorMessage && (
+                    <div className="mt-3">
+                        <ErrorAlert message={errorMessage} onRetry={handleRetry} />
+                    </div>
                 )}
             </div>
         </div>

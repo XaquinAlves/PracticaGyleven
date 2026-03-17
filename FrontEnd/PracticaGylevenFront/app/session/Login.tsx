@@ -39,6 +39,7 @@ export default function Login() {
                                     className="form-control"
                                     id="username"
                                     name="username"
+                                    required={true}
                                     onChange={handleUserNameChange}
                                 />
                             </div>
@@ -49,6 +50,7 @@ export default function Login() {
                                     className="form-control"
                                     id="password"
                                     name="password"
+                                    required={true}
                                     onChange={handlePasswordChange}
                                 />
                             </div>

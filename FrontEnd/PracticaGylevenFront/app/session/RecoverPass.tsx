@@ -18,6 +18,7 @@ export default function RecoverPass() {
                                     className="form-control"
                                     id="email"
                                     name="email"
+                                    required={true}
                                 />
                             </div>
                             <button type="submit" className="btn btn-primary">

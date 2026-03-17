@@ -21,6 +21,17 @@ interface NeosContextValue {
 
 const NeosContext = createContext<NeosContextValue | undefined>(undefined);
 
+export const MIN_NEOS_PAGE = 0;
+export const MAX_NEOS_PAGE = 100;
+
+function clampPage(value: number) {
+    if (Number.isNaN(value)) {
+        return MIN_NEOS_PAGE;
+    }
+    const truncated = Math.trunc(value);
+    return Math.min(MAX_NEOS_PAGE, Math.max(MIN_NEOS_PAGE, truncated));
+}
+
 export function NeosProvider({
     children,
     initialPage = 0,
@@ -31,7 +42,7 @@ export function NeosProvider({
     const [neos, setNeos] = useState<NeosResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [page, setPage] = useState(initialPage);
+    const [page, setPageState] = useState(() => clampPage(initialPage));
 
     const loadNeos = useCallback(async () => {
         setLoading(true);
@@ -61,6 +72,10 @@ export function NeosProvider({
         }
         await saveNeos(neos);
     }, [neos]);
+
+    const setPage = useCallback((value: number) => {
+        setPageState(clampPage(value));
+    }, []);
 
     const value = useMemo(
         () => ({

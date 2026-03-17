@@ -2,7 +2,12 @@ import Sidebar from "~/common/Sidebar";
 import NeosTable from "./Neo";
 import { useState, type ChangeEvent } from "react";
 import ErrorAlert from "~/common/ErrorAlert";
-import { NeosProvider, useNeos } from "./useNeos";
+import {
+    NeosProvider,
+    useNeos,
+    MIN_NEOS_PAGE,
+    MAX_NEOS_PAGE,
+} from "./useNeos";
 
 export default function NeosView() {
     return (
@@ -54,15 +59,20 @@ function NeosViewContent() {
             <div className="row justify-content-center mt-5 col-8 col-lg-10">
                 <div>
                     <div className="form-group mb-3 col-6 col-lg-2">
-                        <label htmlFor="page">Número de página:</label>
+                        <label htmlFor="page">
+                            Número de página (entre {MIN_NEOS_PAGE} y{" "}
+                            {MAX_NEOS_PAGE}):
+                        </label>
                         <input
                             type="number"
                             className="form-control"
                             id="page"
                             name="page"
-                            min="0"
+                            min={MIN_NEOS_PAGE}
+                            max={MAX_NEOS_PAGE}
                             value={page}
                             onChange={handlePageChange}
+                            inputMode="numeric"
                         />
                     </div>
                 </div>

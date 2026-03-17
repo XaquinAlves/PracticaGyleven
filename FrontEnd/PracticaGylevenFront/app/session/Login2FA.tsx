@@ -19,6 +19,7 @@ export default function Login2FA() {
                                     className="form-control"
                                     id="clave"
                                     name="clave"
+                                    required={true}
                                     onChange={handleCodeChange}
                                 />
                             </div>

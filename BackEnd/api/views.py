@@ -1,20 +1,24 @@
 import json
+import os
+from pathlib import Path
 
-from django.contrib.auth import authenticate, login, logout, views as auth_views
+import environ
+import pyotp
+from django.contrib.auth import authenticate, login, logout
+from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
-from django.core.mail import send_mail
-from pathlib import Path
-import environ
-import os
-import pyotp
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env()
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+
+def _json_error(message: str, status: int = 400) -> JsonResponse:
+    return JsonResponse({'detail': message}, status=status)
+
 
 def get_csrf(request):
     response = JsonResponse({'detail': 'CSRF cookie set'})
@@ -24,28 +28,32 @@ def get_csrf(request):
 
 @require_POST
 def login_view(request):
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return _json_error('JSON inválido')
+
     username = data.get('username')
     password = data.get('password')
 
     if username is None or password is None:
-        return JsonResponse({'detail': 'Por favor introduzca usuario y contraseña.'}, status=400)
+        return _json_error('Por favor introduzca usuario y contraseña.')
 
     user = authenticate(username=username, password=password)
 
     if user is None:
-        return JsonResponse({'detail': 'Credenciales invalidas.'}, status=400)
+        return _json_error('Credenciales inválidas.')
 
     login(request, user)
-    return JsonResponse({'detail': 'Sesión iniciada con exito.'})
+    return JsonResponse({'detail': 'Sesión iniciada con éxito.'})
 
 
 def logout_view(request):
     if not request.user.is_authenticated:
-        return JsonResponse({'detail': 'No has iniciado sesión.'}, status=400)
+        return _json_error('No has iniciado sesión.')
 
     logout(request)
-    return JsonResponse({'detail': 'Sesión cerradda con éxito.'})
+    return JsonResponse({'detail': 'Sesión cerrada con éxito.'})
 
 
 @ensure_csrf_cookie
@@ -62,43 +70,64 @@ def whoami_view(request):
 
     return JsonResponse({'username': request.user.username})
 
+
 def change_password_view(request):
     if not request.user.is_authenticated:
-        return JsonResponse({'detail': 'No has iniciado sesión.'}, status=400)
+        return _json_error('No has iniciado sesión.')
 
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return _json_error('JSON inválido')
+
     new_password = data.get('password')
 
-    if new_password is None:
-        return JsonResponse({'detail': 'Por favor introduce una nueva contraseña.'}, status=400)
+    if not new_password:
+        return _json_error('Por favor introduce una nueva contraseña.')
 
     request.user.set_password(new_password)
     request.user.save()
-    return JsonResponse({'detail': 'Contraseña cambiada con exito.'})
+    return JsonResponse({'detail': 'Contraseña cambiada con éxito.'})
+
 
 def send_recovery_email_view(request):
     if not request.user.is_authenticated:
-        return JsonResponse({'detail': 'No has iniciado sesión.'}, status=400)
+        return _json_error('No has iniciado sesión.')
 
-    # In a real application, this would send an email with a recovery link
+    # En una aplicaci�n real se enviar�a un correo con un enlace de recuperaci�n.
+    return JsonResponse({'detail': 'Se enviará un email de recuperación pronto.'})
+
+
 def send_totp_token_view(request):
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return _json_error('JSON inválido')
+
     username = data.get('username')
     password = data.get('password')
+
+    if not username or not password:
+        return _json_error('Por favor introduce usuario y contraseña.')
+
     user = authenticate(username=username, password=password)
     if user is None:
-        return JsonResponse({'detail': 'Invalid credentials.'}, status=400)
+        return _json_error('Credenciales inv�lidas.')
 
-    varname = username.upper() + "_TOKEN"
-    secret = env(varname)
-    if (type(secret) == str):
-        totp = pyotp.TOTP(secret, interval=60);
+    varname = username.upper() + '_TOKEN'
+    try:
+        secret = env(varname)
+    except Exception:
+        return _json_error('Falta el token TOTP en la configuración.', 500)
+
+    if isinstance(secret, str):
+        totp = pyotp.TOTP(secret, interval=60)
         send_mail(
-            "Clave de un solo uso",
-            "Aquí tienes tu clave: " + totp.now(),
-            "xaquinalves@gmail.com",
+            'Clave de un solo uso',
+            'Aqu� tienes tu clave: ' + totp.now(),
+            'xaquinalves@gmail.com',
             [user.email],
-            fail_silently=False
+            fail_silently=False,
         )
 
-    return JsonResponse({'Mensaje': "Clave enviada al correo"})
+    return JsonResponse({'detail': 'Clave enviada al correo.'})

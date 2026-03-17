@@ -24,7 +24,9 @@ export async function fetchNeos(page: number) {
         credentials: "include",
     });
     if (!response.ok) {
-        throw new Error(response.statusText || "Error al obtener los NEOs");
+        throw new Error(
+            (await parseDetail(response)) || "Error al obtener los NEOs",
+        );
     }
     return (await response.json()) as NeosResponse;
 }
@@ -39,6 +41,20 @@ export async function saveNeos(neos: NeosResponse) {
         body: JSON.stringify(neos),
     });
     if (!response.ok) {
-        throw new Error(response.statusText || "Error al guardar los datos");
+        throw new Error(
+            (await parseDetail(response)) || "Error al guardar los NEOs",
+        );
     }
+}
+
+async function parseDetail(response: Response) {
+    try {
+        const payload = await response.clone().json();
+        if (payload && typeof payload.detail === "string") {
+            return payload.detail;
+        }
+    } catch (error) {
+        console.error("Failed to parse error detail", error);
+    }
+    return response.statusText;
 }

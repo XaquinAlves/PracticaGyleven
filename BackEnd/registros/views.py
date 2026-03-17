@@ -7,7 +7,7 @@ from typing import Any
 from mimetypes import guess_type
 
 from django.conf import settings
-from django.http import FileResponse, Http404, JsonResponse
+from django.http import FileResponse, JsonResponse
 import pandas as pd
 import re
 from datetime import datetime
@@ -155,6 +155,10 @@ def _compute_media_tree_version() -> str:
 
 
 
+def _json_error(detail: str, status_code: int = status.HTTP_400_BAD_REQUEST):
+    return Response({"detail": detail}, status=status_code)
+
+
 def _sanitize_target_dir(raw_dir: str | None) -> str:
     if not raw_dir:
         return ""
@@ -228,51 +232,125 @@ def _is_previewable_mime(mime_type: str | None) -> bool:
 
 # Create your views here.
 def get_neos(request):
-    api_key = (os.getenv('NASA_API_KEY'));
-    response = requests.get('https://api.nasa.gov/neo/rest/v1/neo/browse?api_key={}'.format(api_key))
-    data = response.json()
-    neosRaw = data.get('near_earth_objects')
-    neos = [];
-    for neoRaw in neosRaw:
-        neo = {
-            'id': neoRaw.get('id'),
-            'name': neoRaw.get('name'),
-            'is_potentially_hazardous_asteroid': neoRaw.get('is_potentially_hazardous_asteroid'),
-            'estimated_diameter_km_min': neoRaw.get('estimated_diameter').get('kilometers').get('estimated_diameter_min'),
-            'estimated_diameter_km_max': neoRaw.get('estimated_diameter').get('kilometers').get('estimated_diameter_max'),
-        }
-        neos.append(neo)
-    return JsonResponse({'neos': neos})
+    api_key = os.getenv("NASA_API_KEY")
+    if not api_key:
+        return _json_error(
+            "Falta la clave NASA_API_KEY en el servidor",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    try:
+        response = requests.get(
+            "https://api.nasa.gov/neo/rest/v1/neo/browse",
+            params={"api_key": api_key},
+            timeout=5,
+        )
+        response.raise_for_status()
+        data = response.json()
+        neos_raw = data.get("near_earth_objects", [])
+        neos = []
+        for neo_raw in neos_raw:
+            estimated = neo_raw.get("estimated_diameter", {}).get("kilometers", {})
+            neos.append(
+                {
+                    "id": neo_raw.get("id"),
+                    "name": neo_raw.get("name"),
+                    "is_potentially_hazardous_asteroid": neo_raw.get(
+                        "is_potentially_hazardous_asteroid"
+                    ),
+                    "estimated_diameter_km_min": estimated.get(
+                        "estimated_diameter_min"
+                    ),
+                    "estimated_diameter_km_max": estimated.get(
+                        "estimated_diameter_max"
+                    ),
+                }
+            )
+        return JsonResponse({"neos": neos})
+    except requests.RequestException as exc:
+        logger.exception("Failed to fetch NEOS: %s", exc)
+        return Response(
+            {"detail": "No se pudo obtener los asteroides cercanos"},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
 
 def get_neos_by_page(request, page):
-    api_key = (os.getenv('NASA_API_KEY'));
-    response = requests.get('https://api.nasa.gov/neo/rest/v1/neo/browse?api_key={}&page={}'.format(api_key, page));
-    data = response.json()
-    neosRaw = data.get('near_earth_objects')
-    neos = [];
-    for neoRaw in neosRaw:
-        neo = {
-            'id': neoRaw.get('id'),
-            'name': neoRaw.get('name'),
-            'is_potentially_hazardous_asteroid': neoRaw.get('is_potentially_hazardous_asteroid'),
-            'estimated_diameter_km_min': neoRaw.get('estimated_diameter').get('kilometers').get('estimated_diameter_min'),
-            'estimated_diameter_km_max': neoRaw.get('estimated_diameter').get('kilometers').get('estimated_diameter_max'),
-        }
-        neos.append(neo)
-    return JsonResponse({'neos': neos})
+    api_key = os.getenv("NASA_API_KEY")
+    if not api_key:
+        return _json_error(
+            "Falta la clave NASA_API_KEY en el servidor",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    try:
+        page_number = int(page)
+        if page_number < 0:
+            raise ValueError("Página inválida")
+    except ValueError as exc:
+        return _json_error(str(exc), status.HTTP_400_BAD_REQUEST)
+
+    try:
+        response = requests.get(
+            "https://api.nasa.gov/neo/rest/v1/neo/browse",
+            params={"api_key": api_key, "page": page_number},
+            timeout=5,
+        )
+        response.raise_for_status()
+        data = response.json()
+        neos_raw = data.get("near_earth_objects", [])
+        neos = []
+        for neo_raw in neos_raw:
+            estimated = neo_raw.get("estimated_diameter", {}).get("kilometers", {})
+            neos.append(
+                {
+                    "id": neo_raw.get("id"),
+                    "name": neo_raw.get("name"),
+                    "is_potentially_hazardous_asteroid": neo_raw.get(
+                        "is_potentially_hazardous_asteroid"
+                    ),
+                    "estimated_diameter_km_min": estimated.get(
+                        "estimated_diameter_min"
+                    ),
+                    "estimated_diameter_km_max": estimated.get(
+                        "estimated_diameter_max"
+                    ),
+                }
+            )
+        return JsonResponse({"neos": neos})
+    except requests.RequestException as exc:
+        logger.exception("Failed to fetch NEOS page %s: %s", page_number, exc)
+        return Response(
+            {"detail": "No se pudo obtener los asteroides cercanos"},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
 
 def save_neos(request):
-    data = json.loads(request.body);
-    for neo in data.get('neos'):
-        neo_obj = NearEarthObject(
-            id=neo.get('id'),
-            name=neo.get('name'),
-            diameter_min=neo.get('estimated_diameter_km_min'),
-            diameter_max=neo.get('estimated_diameter_km_max'),
-            is_potentially_hazardous=neo.get('is_potentially_hazardous_asteroid')
+    try:
+        payload = json.loads(request.body)
+    except json.JSONDecodeError as exc:
+        return _json_error("JSON inválido", status.HTTP_400_BAD_REQUEST)
+
+    neos_data = payload.get("neos")
+    if not isinstance(neos_data, list):
+        return _json_error("'neos' debe ser una lista", status.HTTP_400_BAD_REQUEST)
+
+    try:
+        for neo in neos_data:
+            neo_obj = NearEarthObject(
+                id=neo.get("id"),
+                name=neo.get("name"),
+                diameter_min=neo.get("estimated_diameter_km_min"),
+                diameter_max=neo.get("estimated_diameter_km_max"),
+                is_potentially_hazardous=neo.get(
+                    "is_potentially_hazardous_asteroid"
+                ),
+            )
+            neo_obj.save()
+    except Exception as exc:
+        logger.exception("Failed to save NEOS: %s", exc)
+        return Response(
+            {"detail": "Error al guardar los NEOs"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-        neo_obj.save()
-    return JsonResponse({'detail': 'NEOs saved successfully.'})
+    return JsonResponse({"detail": "NEOs saved successfully."})
 
 
 @api_view(["GET"])
@@ -302,7 +380,10 @@ def list_facturas(request):
         return Response(records)
     except Exception as exc:
         logger.error("Failed to read invoices CSV %s: %s", invoices_path, exc)
-        return Response([], status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(
+            {"detail": "No se pudo leer la lista de facturas"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 @api_view(["POST"])
@@ -316,99 +397,106 @@ def upload_to_media(request):
     files = request.FILES.getlist("files") or request.FILES.getlist("pdfs")
     if not files:
         return Response(
-            {"detail": "No se ha enviado ningÃºn archivo."},
+            {"detail": "No se ha enviado ningún archivo."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    destination = (
-        settings.MEDIA_ROOT
-        if not target_dir
-        else os.path.join(settings.MEDIA_ROOT, target_dir)
-    )
-    os.makedirs(destination, exist_ok=True)
+    try:
+        destination = (
+            settings.MEDIA_ROOT
+            if not target_dir
+            else os.path.join(settings.MEDIA_ROOT, target_dir)
+        )
+        os.makedirs(destination, exist_ok=True)
 
-    saved_items = []
-    for uploaded_file in files:
-        name_root, ext = os.path.splitext(uploaded_file.name)
-        stored_path = os.path.join(destination, uploaded_file.name)
-        counter = 1
-        while os.path.exists(stored_path):
-            stored_path = os.path.join(
-                destination,
-                f"{name_root}_{counter}{ext}",
+        saved_items = []
+        for uploaded_file in files:
+            name_root, ext = os.path.splitext(uploaded_file.name)
+            stored_path = os.path.join(destination, uploaded_file.name)
+            counter = 1
+            while os.path.exists(stored_path):
+                stored_path = os.path.join(
+                    destination,
+                    f"{name_root}_{counter}{ext}",
+                )
+                counter += 1
+
+            with open(stored_path, "wb") as out_file:
+                for chunk in uploaded_file.chunks():
+                    out_file.write(chunk)
+
+            saved_items.append(
+                {
+                    "original_name": uploaded_file.name,
+                    "stored_name": os.path.basename(stored_path),
+                    "relative_path": os.path.relpath(
+                        stored_path,
+                        settings.MEDIA_ROOT,
+                    ).replace("\\", "/"),
+                    "target_dir": target_dir,
+                    "size": uploaded_file.size,
+                }
             )
-            counter += 1
 
-        with open(stored_path, "wb") as out_file:
-            for chunk in uploaded_file.chunks():
-                out_file.write(chunk)
+        records_path = os.path.join(settings.MEDIA_ROOT, "uploaded_files_table.csv")
+        os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+        existing_df = pd.DataFrame()
+        if os.path.exists(records_path):
+            try:
+                existing_df = pd.read_csv(records_path)
+            except Exception:
+                existing_df = pd.DataFrame()
 
-        saved_items.append(
-            {
-                "original_name": uploaded_file.name,
-                "stored_name": os.path.basename(stored_path),
-                "relative_path": os.path.relpath(
-                    stored_path,
-                    settings.MEDIA_ROOT,
-                ).replace("\\", "/"),
-                "target_dir": target_dir,
-                "size": uploaded_file.size,
-            }
+        next_id = 1
+        if not existing_df.empty and "id" in existing_df.columns:
+            try:
+                next_id = int(existing_df["id"].max()) + 1
+            except Exception:
+                next_id = 1
+
+        username = (
+            request.user.get_username()
+            if hasattr(request.user, "get_username")
+            else str(request.user)
         )
+        timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        upload_records = []
+        for item in saved_items:
+            upload_records.append(
+                {
+                    "id": next_id,
+                    "original_name": item["original_name"],
+                    "uploaded_by": username,
+                    "uploaded_at": timestamp,
+                }
+            )
+            next_id += 1
 
-    records_path = os.path.join(settings.MEDIA_ROOT, "uploaded_files_table.csv")
-    os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
-    existing_df = pd.DataFrame()
-    if os.path.exists(records_path):
-        try:
-            existing_df = pd.read_csv(records_path)
-        except Exception:
-            existing_df = pd.DataFrame()
+        if upload_records:
+            new_df = pd.DataFrame(upload_records)
+            if not existing_df.empty:
+                combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+            else:
+                combined_df = new_df
+            combined_df.to_csv(records_path, index=False)
+            logger.info(
+                "Appended %d uploaded file records to %s",
+                len(upload_records),
+                records_path,
+            )
 
-    next_id = 1
-    if not existing_df.empty and "id" in existing_df.columns:
-        try:
-            next_id = int(existing_df["id"].max()) + 1
-        except Exception:
-            next_id = 1
-
-    username = (
-        request.user.get_username()
-        if hasattr(request.user, "get_username")
-        else str(request.user)
-    )
-    timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-    upload_records = []
-    for item in saved_items:
-        upload_records.append(
-            {
-                "id": next_id,
-                "original_name": item["original_name"],
-                "uploaded_by": username,
-                "uploaded_at": timestamp,
-            }
-        )
-        next_id += 1
-
-    if upload_records:
-        new_df = pd.DataFrame(upload_records)
-        if not existing_df.empty:
-            combined_df = pd.concat([existing_df, new_df], ignore_index=True)
-        else:
-            combined_df = new_df
-        combined_df.to_csv(records_path, index=False)
         logger.info(
-            "Appended %d uploaded file records to %s",
-            len(upload_records),
-            records_path,
+            "Uploaded %d files to %s",
+            len(saved_items),
+            target_dir or "media root",
         )
-
-    logger.info(
-        "Uploaded %d files to %s",
-        len(saved_items),
-        target_dir or "media root",
-    )
-    return Response(saved_items, status=status.HTTP_201_CREATED)
+        return Response(saved_items, status=status.HTTP_201_CREATED)
+    except Exception as exc:
+        logger.exception("Failed to upload media files: %s", exc)
+        return Response(
+            {"detail": "No se pudo subir los archivos."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -429,46 +517,51 @@ def leer_factura_pdf(request):
             {"error": "Falta el archivo PDF o el formato no es válido"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    facturas_dir = os.path.join(settings.MEDIA_ROOT, "Facturas")
-    invoice_rows = []
-    for uploaded_file in valid_files:
-        saved_path = None
-        relative_path = None
-        try:
-            saved_path = _save_pdf_to_facturas(uploaded_file, facturas_dir)
-            relative_path = os.path.relpath(saved_path, settings.MEDIA_ROOT).replace("\\", "/")
-            reader = PdfReader(saved_path)
-            page_text = "\n".join(page.extract_text() or "" for page in reader.pages)
-            metadata = _extract_invoice_metadata(page_text)
-            invoice_rows.append(
-                {
-                    "name": uploaded_file.name,
-                    "page_count": len(reader.pages),
-                    "invoice_number": metadata["invoice_number"],
-                    "invoice_date": metadata["invoice_date"],
-                    "total": metadata["total"],
-                    "extracted_at": datetime.utcnow().isoformat(),
-                    "stored_path": relative_path,
-                }
-            )
-        except Exception as exc:
-            logger.error("PDF parsing failed for %s: %s", uploaded_file.name, exc)
-            invoice_rows.append(
-                {
-                    "name": uploaded_file.name,
-                    "error": str(exc),
-                    "stored_path": relative_path,
-                }
-            )
+    try:
+        facturas_dir = os.path.join(settings.MEDIA_ROOT, "Facturas")
+        invoice_rows = []
+        for uploaded_file in valid_files:
+            saved_path = None
+            relative_path = None
+            try:
+                saved_path = _save_pdf_to_facturas(uploaded_file, facturas_dir)
+                relative_path = os.path.relpath(saved_path, settings.MEDIA_ROOT).replace("\\", "/")
+                reader = PdfReader(saved_path)
+                page_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+                metadata = _extract_invoice_metadata(page_text)
+                invoice_rows.append(
+                    {
+                        "name": uploaded_file.name,
+                        "page_count": len(reader.pages),
+                        "invoice_number": metadata["invoice_number"],
+                        "invoice_date": metadata["invoice_date"],
+                        "total": metadata["total"],
+                        "extracted_at": datetime.utcnow().isoformat(),
+                        "stored_path": relative_path,
+                    }
+                )
+            except Exception as exc:
+                logger.error("PDF parsing failed for %s: %s", uploaded_file.name, exc)
+                invoice_rows.append(
+                    {
+                        "name": uploaded_file.name,
+                        "error": str(exc),
+                        "stored_path": relative_path,
+                    }
+                )
 
-    successful_invoices = [
-        row for row in invoice_rows if "error" not in row
-    ]
-    if successful_invoices:
-        invoice_df = pd.DataFrame(successful_invoices)
-        _persist_invoices(invoice_df)
+        successful_invoices = [row for row in invoice_rows if "error" not in row]
+        if successful_invoices:
+            invoice_df = pd.DataFrame(successful_invoices)
+            _persist_invoices(invoice_df)
 
-    return Response(invoice_rows)
+        return Response(invoice_rows)
+    except Exception as exc:
+        logger.exception("Failed to process invoices: %s", exc)
+        return Response(
+            {"detail": "Error al procesar las facturas"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -476,15 +569,29 @@ def list_media_structure(request):
     media_root = Path(settings.MEDIA_ROOT)
     if not media_root.exists():
         return Response([], status=status.HTTP_200_OK)
-    tree = _build_media_tree(media_root)
-    return Response(tree)
+    try:
+        tree = _build_media_tree(media_root)
+        return Response(tree)
+    except Exception as exc:
+        logger.exception("Failed to build media structure: %s", exc)
+        return Response(
+            {"detail": "Error al obtener la estructura de medios"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def media_tree_version(request):
-    version = _compute_media_tree_version()
-    return Response({"tree_version": version})
+    try:
+        version = _compute_media_tree_version()
+        return Response({"tree_version": version})
+    except Exception as exc:
+        logger.exception("Failed to compute media tree version: %s", exc)
+        return Response(
+            {"detail": "Error al calcular la versión de medios"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 @api_view(["GET"])
@@ -493,16 +600,21 @@ def download_media_file(request):
     #Obtiene el parametro de la ruta del archivo a descargar, y comprueba que es válido
     relative_path = request.query_params.get("path")
     if not relative_path:
-        raise Http404("Se requiere el parámetro 'path'")
-
+        return Response(
+            {"detail": "Se requiere el parámetro 'path'"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     try:
         sanitized = _sanitize_relative_path(relative_path)
     except ValueError as exc:
-        raise Http404(str(exc))
+        return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
     file_path = Path(settings.MEDIA_ROOT) / sanitized
     if not file_path.exists() or not file_path.is_file():
-        raise Http404("Archivo no encontrado")
+        return Response(
+            {"detail": "Archivo no encontrado"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
     #Comprobado que el archivo existe, comprueba si es visualizable por el navegadir
     mime_type, _ = guess_type(str(file_path))
@@ -540,9 +652,16 @@ def download_media_file(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def list_important_files(request):
-    df = _load_important_records()
-    records = df.to_dict(orient="records")
-    return Response(records)
+    try:
+        df = _load_important_records()
+        records = df.to_dict(orient="records")
+        return Response(records)
+    except Exception as exc:
+        logger.exception("Failed to read important files: %s", exc)
+        return Response(
+            {"detail": "Error al cargar archivos importantes"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 @api_view(["POST"])
@@ -579,39 +698,46 @@ def toggle_important_file(request):
     else:
         important_bool = bool(important_flag)
 
-    df = _load_important_records()
-    username = (
-        request.user.get_username()
-        if hasattr(request.user, "get_username")
-        else str(request.user)
-    )
-    timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    mask = df["relative_path"] == sanitized_path
-    if mask.any():
-        df.loc[
-            mask,
-            ["is_important", "marked_at", "marked_by"],
-        ] = important_bool, timestamp, username
-    else:
-        new_row = pd.DataFrame(
-            [
-                {
-                    "relative_path": sanitized_path,
-                    "is_important": important_bool,
-                    "marked_at": timestamp,
-                    "marked_by": username,
-                }
-            ]
+    try:
+        df = _load_important_records()
+        username = (
+            request.user.get_username()
+            if hasattr(request.user, "get_username")
+            else str(request.user)
         )
-        df = pd.concat([df, new_row], ignore_index=True)
+        timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    _persist_important_records(df)
-    return Response(
-        {
-            "relative_path": sanitized_path,
-            "is_important": important_bool,
-            "marked_at": timestamp,
-            "marked_by": username,
-        }
-    )
+        mask = df["relative_path"] == sanitized_path
+        if mask.any():
+            df.loc[
+                mask,
+                ["is_important", "marked_at", "marked_by"],
+            ] = important_bool, timestamp, username
+        else:
+            new_row = pd.DataFrame(
+                [
+                    {
+                        "relative_path": sanitized_path,
+                        "is_important": important_bool,
+                        "marked_at": timestamp,
+                        "marked_by": username,
+                    }
+                ]
+            )
+            df = pd.concat([df, new_row], ignore_index=True)
+
+        _persist_important_records(df)
+        return Response(
+            {
+                "relative_path": sanitized_path,
+                "is_important": important_bool,
+                "marked_at": timestamp,
+                "marked_by": username,
+            }
+        )
+    except Exception as exc:
+        logger.exception("Failed to toggle important file: %s", exc)
+        return Response(
+            {"detail": "Error al marcar el archivo importante"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )

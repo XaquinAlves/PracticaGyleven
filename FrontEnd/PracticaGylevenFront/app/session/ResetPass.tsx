@@ -30,6 +30,7 @@ export default function ChangePass() {
                                 className="form-control"
                                 id="password"
                                 name="password"
+                                required={true}
                                 onChange={handlePasswordChange}
                             />
                         </div>
@@ -42,6 +43,7 @@ export default function ChangePass() {
                                 className="form-control"
                                 id="confirmPassword"
                                 name="confirmPassword"
+                                required={true}
                                 onChange={handleRepeatPasswordChange}
                             />
                         </div>
