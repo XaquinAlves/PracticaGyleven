@@ -3,7 +3,7 @@ import type { NavigateFunction } from "react-router";
 import { getSession } from "~/routes/home";
 import ApiHelper from "~/common/ApiHelper";
 
-const PASSWORD_RULES = [
+export const PASSWORD_RULES = [
     "mínimo 8 caracteres",
     "una letra mayúscula",
     "una letra minúscula",
@@ -11,21 +11,27 @@ const PASSWORD_RULES = [
     "un símbolo especial",
 ];
 
-function ensurePasswordStrength(password: string) {
+export function ensurePasswordStrength(password: string) {
     if (password.length < 8) {
         throw new Error("La contraseña debe tener al menos 8 caracteres.");
     }
     if (!/[A-Z]/.test(password)) {
-        throw new Error("La contraseña debe incluir al menos una letra mayúscula.");
+        throw new Error(
+            "La contraseña debe incluir al menos una letra mayúscula.",
+        );
     }
     if (!/[a-z]/.test(password)) {
-        throw new Error("La contraseña debe incluir al menos una letra minúscula.");
+        throw new Error(
+            "La contraseña debe incluir al menos una letra minúscula.",
+        );
     }
     if (!/[0-9]/.test(password)) {
         throw new Error("La contraseña debe incluir al menos un número.");
     }
     if (!/[^A-Za-z0-9]/.test(password)) {
-        throw new Error("La contraseña debe incluir al menos un símbolo especial.");
+        throw new Error(
+            "La contraseña debe incluir al menos un símbolo especial.",
+        );
     }
 }
 
@@ -101,7 +107,7 @@ export async function changePass(
     }
 
     ensurePasswordStrength(newPassword);
-    } else {
+    {
         try {
             await ApiHelper.ensureCSRF();
             const response = await fetch(
@@ -137,40 +143,39 @@ export async function resetPass(
     repeatPassword: string,
     key: string,
 ) {
-  event.preventDefault();
-  if (password !== repeatPassword) {
+    event.preventDefault();
+    if (password !== repeatPassword) {
         throw new Error("Las contraseñas no coinciden");
-  }
+    }
 
-  ensurePasswordStrength(password);
-  } else {
-      try {
-          await ApiHelper.ensureCSRF();
-          const response = await fetch(
-              ApiHelper.API_URL + "/_allauth/browser/v1/auth/password/reset",
-              {
-                    method: "POST",
-                    headers: ApiHelper.getJsonHeaders(),
-                    credentials: "include",
-                    body: JSON.stringify({
-                        key: key,
-                        password: password,
-                    }),
-              },
-          );
-          if (response.ok) {
-                window.location.reload();
-          } else {
-              const detail = await parseDetail(response);
-              throw Error(detail || "No se pudo restablecer la contraseña");
-          }
-      } catch (err) {
-          console.error(err);
-            throw err;
-      }
-  }
-    // https://docs.allauth.org/_allauth/{client}/v1/auth/password/reset
+    ensurePasswordStrength(password);
+
+    try {
+        await ApiHelper.ensureCSRF();
+        const response = await fetch(
+            ApiHelper.API_URL + "/_allauth/browser/v1/auth/password/reset",
+            {
+                method: "POST",
+                headers: ApiHelper.getJsonHeaders(),
+                credentials: "include",
+                body: JSON.stringify({
+                    key: key,
+                    password: password,
+                }),
+            },
+        );
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const detail = await parseDetail(response);
+            throw Error(detail || "No se pudo restablecer la contraseña");
+        }
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
 }
+// https://docs.allauth.org/_allauth/{client}/v1/auth/password/reset
 
 export async function login(
     event: React.FormEvent<HTMLFormElement>,
@@ -273,11 +278,7 @@ export async function logout() {
     // https://docs.allauth.org/_allauth/{client}/v1/auth/session
 }
 
-
-export async function sendRecoveryEmail(
-    event: React.SubmitEvent<HTMLFormElement>,
-) {
-    event.preventDefault();
+export async function sendRecoveryEmail(email: string) {
     await ApiHelper.ensureCSRF();
     const response = await fetch(
         ApiHelper.API_URL + "/_allauth/browser/v1/auth/password/request",
@@ -286,17 +287,16 @@ export async function sendRecoveryEmail(
             headers: ApiHelper.getJsonHeaders(),
             credentials: "include",
             body: JSON.stringify({
-                email: event.target.email.value,
+                email,
             }),
         },
     );
     if (!response.ok) {
         const detail = await parseDetail(response);
-        throw new Error(detail || "Error al recuperar contraseña");
+        throw new Error(detail || "Error al recuperar contrase�a");
     }
-    // https://docs.allauth.org/_allauth/{client}/v1/auth/password/request
+    // https://docs.allauth.org/_allauth/browser/v1/auth/password/request
 }
-
 export async function loginGoogle() {
     await ApiHelper.ensureCSRF();
     //https://docs.allauth.org/_allauth/{client}/v1/auth/provider/token

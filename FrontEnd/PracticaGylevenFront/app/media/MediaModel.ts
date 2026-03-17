@@ -108,3 +108,31 @@ export async function fetchMediaTreeVersion() {
     const data = await response.json();
     return data.tree_version ?? "";
 }
+
+export async function toggleImportantFile(
+    relativePath: string,
+    important: boolean,
+) {
+    const response = await fetch(
+        ApiHelper.API_URL + "/registros/media/important-files/toggle/",
+        {
+            method: "POST",
+            headers: ApiHelper.getJsonHeaders(true),
+            credentials: "include",
+            body: JSON.stringify({
+                relative_path: relativePath,
+                important: important,
+            }),
+        },
+    );
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+        const message =
+            data?.detail || response.statusText || "Error al alternar favorito";
+        throw new Error(message);
+    }
+
+    return data;
+}

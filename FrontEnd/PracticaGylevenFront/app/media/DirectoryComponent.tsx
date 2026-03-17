@@ -1,8 +1,7 @@
 import type { DirectoryProps } from "./MediaModel";
 import FileComponent from "./FileComponent";
-import { isDirectory } from "./MediaModel";
+import { isDirectory, toggleImportantFile } from "./MediaModel";
 import { useCallback, useMemo, useState } from "react";
-import ApiHelper from "~/common/ApiHelper";
 import ErrorAlert from "~/common/ErrorAlert";
 import { useMedia } from "./useMedia";
 import { publishMediaTreeUpdate } from "./mediaUpdates";
@@ -28,45 +27,24 @@ export default function DirectoryComponent({
         return next;
     }, [importantFiles]);
 
-    const handleToggleImportant = useCallback(
-        async (relativePath: string, currentlyImportant: boolean) => {
-            try {
-                const response = await fetch(
-                    ApiHelper.API_URL +
-                        "/registros/media/important-files/toggle/",
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRFToken": ApiHelper.CSRF,
-                        },
-                        credentials: "include",
-                        body: JSON.stringify({
-                            relative_path: relativePath,
-                            important: !currentlyImportant,
-                        }),
-                    },
-                );
-
-                if (!response.ok) {
-                    throw new Error(
-                        response.statusText || "Error al alternar favorito",
-                    );
-                }
-
+const handleToggleImportant = useCallback(
+    async (relativePath: string, currentlyImportant: boolean) => {
+        setToggleError("");
+        try {
+            await toggleImportantFile(relativePath, !currentlyImportant);
             await refresh();
             publishMediaTreeUpdate();
         } catch (err) {
-                const message =
-                    err instanceof Error
-                        ? err.message
-                        : "Error al alternar favorito";
-                console.error(message);
-                setToggleError(message);
-            }
-        },
-        [refresh],
-    );
+            const message =
+                err instanceof Error
+                    ? err.message
+                    : "Error al alternar favorito";
+            console.error(message);
+            setToggleError(message);
+        }
+    },
+    [refresh],
+);
 
     if (!resolvedDirectory) {
         return null;

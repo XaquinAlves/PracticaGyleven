@@ -47,6 +47,7 @@ export default function MediaUploadForm({
     const [selectedPath, setSelectedPath] = useState("");
     const [newDirectory, setNewDirectory] = useState("");
     const [message, setMessage] = useState<string>("");
+    const [dirError, setDirError] = useState("");
 
     const { directories } = useMedia();
     const basePaths = useMemo(
@@ -81,6 +82,15 @@ export default function MediaUploadForm({
         const createdPath = selectedPath
             ? `${selectedPath}/${sanitized}`
             : sanitized;
+        if (createdPath.length > 100) {
+            setDirError("El nombre de carpeta es demasiado largo (máx. 100 caracteres).");
+            return;
+        }
+        if (availablePaths.includes(createdPath)) {
+            setDirError("La carpeta ya existe.");
+            return;
+        }
+        setDirError("");
         setSelectedPath(createdPath);
         setNewDirectory("");
         onChange();
@@ -166,15 +176,20 @@ export default function MediaUploadForm({
                     </select>
                 </div>
                 <div className="input-group mb-3">
-                    <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Nueva carpeta"
-                        value={newDirectory}
-                        onChange={(event) =>
-                            setNewDirectory(event.target.value)
-                        }
-                    />
+                    <div className="d-flex flex-column gap-2">
+                        <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Nueva carpeta"
+                            value={newDirectory}
+                            onChange={(event) =>
+                                setNewDirectory(event.target.value)
+                            }
+                        />
+                        {dirError && (
+                            <p className="text-danger small mb-0">{dirError}</p>
+                        )}
+                    </div>
                     <button
                         type="button"
                         className="btn btn-outline-secondary"
