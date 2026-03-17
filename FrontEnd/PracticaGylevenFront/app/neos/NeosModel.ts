@@ -14,54 +14,31 @@ export interface NeosResponse {
 
 export interface NeosTableProps {
     neos: NeoItem[];
+    onSave: () => Promise<void>;
+    saving: boolean;
 }
 
-export default class NeosModel {
-    static neos?: NeosResponse;
+export async function fetchNeos(page: number) {
+    const response = await fetch(`${ApiHelper.API_URL}/registros/neos/${page}`, {
+        headers: ApiHelper.getJsonHeaders(false),
+        credentials: "include",
+    });
+    if (!response.ok) {
+        throw new Error(response.statusText || "Error al obtener los NEOs");
+    }
+    return (await response.json()) as NeosResponse;
+}
 
-    static fetchNeos = async (page: number) => {
-        try {
-            const response = await fetch(
-                `${ApiHelper.API_URL}/registros/neos/${page}`,
-                {
-                    headers: ApiHelper.getJsonHeaders(false),
-                    credentials: "include",
-                },
-            );
-            if (response.ok) {
-                const data = await response.json();
-                this.neos = data;
-            } else {
-                throw Error(response.statusText);
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Error de red al obtener los NEOs.");
-        }
-    };
-
-    static handleSaveToDatabase = async (neos: NeosResponse) => {
-        try {
-            const response = await fetch(
-                ApiHelper.API_URL + "/registros/neos/save/",
-                {
-                    method: "POST",
-                    headers: {
-                        ...ApiHelper.getJsonHeaders(),
-                    },
-                    credentials: "include",
-                    body: JSON.stringify(neos),
-                },
-            );
-            if (response.ok) {
-                alert("Datos guardados correctamente.");
-            } else {
-                throw Error(response.statusText);
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Error al guardar los datos.");
-            throw err;
-        }
-    };
+export async function saveNeos(neos: NeosResponse) {
+    const response = await fetch(ApiHelper.API_URL + "/registros/neos/save/", {
+        method: "POST",
+        headers: {
+            ...ApiHelper.getJsonHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify(neos),
+    });
+    if (!response.ok) {
+        throw new Error(response.statusText || "Error al guardar los datos");
+    }
 }

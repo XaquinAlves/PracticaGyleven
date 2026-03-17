@@ -1,4 +1,4 @@
-﻿import NeosModel, { type NeoItem, type NeosTableProps } from "./NeosModel";
+import { type NeoItem, type NeosTableProps } from "./NeosModel";
 
 export function Neo({
     id,
@@ -19,7 +19,11 @@ export function Neo({
     );
 }
 
-export default function NeosTable({ neos }: NeosTableProps) {
+export default function NeosTable({
+    neos,
+    onSave,
+    saving,
+}: NeosTableProps) {
     return (
         <>
             <table className="table table-striped table-bordered">
@@ -43,9 +47,10 @@ export default function NeosTable({ neos }: NeosTableProps) {
             <button
                 type="button"
                 className="btn btn-success my-2"
-                onClick={() => NeosModel.handleSaveToDatabase({ neos })}
+                onClick={onSave}
+                disabled={saving}
             >
-                Guardar datos en BBDD
+                {saving ? "Guardando..." : "Guardar datos en BBDD"}
             </button>
         </>
     );

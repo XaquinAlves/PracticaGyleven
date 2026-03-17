@@ -1,43 +1,52 @@
 import Sidebar from "~/common/Sidebar";
 import NeosTable from "./Neo";
-import {
-    useEffect,
-    useState,
-    type ChangeEvent,
-} from "react";
-import NeosModel from "./NeosModel";
+import { useState, type ChangeEvent } from "react";
 import ErrorAlert from "~/common/ErrorAlert";
+import { NeosProvider, useNeos } from "./useNeos";
 
 export default function NeosView() {
-    const [cargando, setCargando] = useState<boolean>(
-        NeosModel.neos === undefined,
+    return (
+        <NeosProvider>
+            <NeosViewContent />
+        </NeosProvider>
     );
-    const [page, setPage] = useState<number>(0);
-    const [error, setError] = useState<string>("");
+}
 
-    useEffect(() => {
-        if (cargando) {
-            const neos = async () => {
-                try {
-                    setError("");
-                    await NeosModel.fetchNeos(page);
-                } catch (err) {
-                    setError(err instanceof Error ? err.message : String(err));
-                } finally {
-                    setCargando(false);
-                }
-            };
-            neos();
+function NeosViewContent() {
+    const {
+        neos,
+        loading,
+        error,
+        page,
+        setPage,
+        refresh,
+        saveToDatabase,
+    } = useNeos();
+    const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
+
+    const handlePageChange = (event: ChangeEvent<HTMLInputElement>) => {
+        const value = Number(event.target.value);
+        const nextPage = Number.isNaN(value) || value < 0 ? 0 : value;
+        setPage(nextPage);
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        setSaveError("");
+        setSuccessMessage("");
+        try {
+            await saveToDatabase();
+            setSuccessMessage("Datos guardados correctamente.");
+        } catch (err) {
+            setSaveError(
+                err instanceof Error ? err.message : "Error al guardar los datos.",
+            );
+        } finally {
+            setSaving(false);
         }
-    }, [cargando]);
-
-    async function handlePageChange(
-        event: ChangeEvent<HTMLInputElement, HTMLInputElement>,
-    ) {
-        setPage(parseInt(event.target.value));
-        setError("");
-        setCargando(true);
-    }
+    };
 
     return (
         <div className="row">
@@ -52,24 +61,42 @@ export default function NeosView() {
                             id="page"
                             name="page"
                             min="0"
-                            defaultValue="0"
+                            value={page}
                             onChange={handlePageChange}
                         />
                     </div>
                 </div>
 
                 <div className="col-12 col-md-12 mt-5">
-                    {cargando ? (
+                    {loading ? (
                         <div
                             className="spinner-border text-center"
                             role="status"
                         >
                             <span className="visually-hidden">Cargando...</span>
                         </div>
-                    ) : NeosModel.neos ? (
-                        <NeosTable neos={NeosModel.neos.neos} />
                     ) : error ? (
-                        <ErrorAlert message={error} onRetry={() => setCargando(true)} />
+                        <ErrorAlert message={error} onRetry={refresh} />
+                    ) : neos ? (
+                        <>
+                            <NeosTable
+                                neos={neos.neos}
+                                onSave={handleSave}
+                                saving={saving}
+                            />
+                            {successMessage && (
+                                <p className="text-success">
+                                    {successMessage}
+                                </p>
+                            )}
+                            {saveError && (
+                                <ErrorAlert
+                                    className="mt-3"
+                                    message={saveError}
+                                    onRetry={handleSave}
+                                />
+                            )}
+                        </>
                     ) : (
                         <p className="text-muted">
                             No se han cargado los datos todavía.
