@@ -3,6 +3,7 @@ import type { NavigateFunction } from "react-router";
 import { getSession } from "~/routes/home";
 import ApiHelper from "~/common/ApiHelper";
 import { ErrorMessages } from "~/common/messageCatalog";
+import { ApiErrorPayload, parseApiError } from "~/common/apiError";
 
 export const PASSWORD_RULES = [
     "mínimo 8 caracteres",
@@ -31,16 +32,26 @@ export function ensurePasswordStrength(password: string) {
     }
 }
 
-async function parseDetail(response: Response) {
-    try {
-        const data = await response.json();
-        if (data && typeof data.detail === "string") {
-            return data.detail;
-        }
-    } catch (err) {
-        console.error("Could not parse error detail", err);
+const sessionErrorMessages: Record<string, string> = {
+    INVALID_JSON_PAYLOAD: ErrorMessages.sessionInvalidJson,
+    CREDENTIALS_REQUIRED: ErrorMessages.sessionCredentialsRequired,
+    INVALID_CREDENTIALS: ErrorMessages.invalidCredentials,
+    AUTH_REQUIRED: ErrorMessages.sessionAuthRequired,
+    PASSWORD_REQUIRED: ErrorMessages.sessionPasswordRequired,
+    TOTP_SECRET_MISSING: ErrorMessages.sessionTotpSecretMissing,
+};
+
+function mapSessionApiError(payload: ApiErrorPayload, fallback: string) {
+    if (!payload) {
+        return fallback;
     }
-    return response.statusText || "Error del servidor";
+    const mapped = payload.code ? sessionErrorMessages[payload.code] : undefined;
+    return mapped || payload.detail || fallback;
+}
+
+async function throwSessionApiError(response: Response, fallback: string) {
+    const payload = await parseApiError(response);
+    throw new Error(mapSessionApiError(payload, fallback));
 }
 
 export async function whoami() {
@@ -119,11 +130,11 @@ export async function changePass(
                     }),
                 },
             );
-            if (response.ok) {
-                return;
-            } else {
-                const detail = await parseDetail(response);
-                throw Error(detail || ErrorMessages.passwordChangeError);
+            if (!response.ok) {
+                await throwSessionApiError(
+                    response,
+                    ErrorMessages.passwordChangeError,
+                );
             }
         } catch (err) {
             console.error(err);
@@ -160,12 +171,13 @@ export async function resetPass(
                 }),
             },
         );
-        if (response.ok) {
-            window.location.reload();
-        } else {
-            const detail = await parseDetail(response);
-            throw Error(detail || ErrorMessages.passwordResetError);
+        if (!response.ok) {
+            await throwSessionApiError(
+                response,
+                ErrorMessages.passwordResetError,
+            );
         }
+        window.location.reload();
     } catch (err) {
         console.error(err);
         throw err;
@@ -202,7 +214,13 @@ export async function login(
     }
 
     if (response.status === 401) {
-        const data = await response.json();
+        const data =
+            (await response
+                .clone()
+                .json()
+                .catch(() => undefined)) as
+            | { data?: { flows?: Array<{ id: string; is_pending?: boolean }> } }
+            | undefined;
         const mfaFlow = data?.data?.flows?.find(
             (element: { id: string; is_pending?: boolean }) =>
                 element.id === "mfa_authenticate" && element.is_pending,
@@ -223,8 +241,7 @@ export async function login(
         }
     }
 
-    const detail = await parseDetail(response);
-    throw new Error(detail || ErrorMessages.invalidCredentials);
+    await throwSessionApiError(response, ErrorMessages.invalidCredentials);
 }
 
 export async function login2fa(
@@ -246,8 +263,7 @@ export async function login2fa(
         },
     );
     if (!response.ok) {
-        const detail = await parseDetail(response);
-        throw new Error(detail || ErrorMessages.twoFaError);
+        await throwSessionApiError(response, ErrorMessages.twoFaError);
     }
     await response.json();
     getSession();
@@ -269,8 +285,9 @@ export async function logout() {
         window.location.reload();
         return;
     }
-    const detail = await parseDetail(response);
-    throw new Error(detail || ErrorMessages.logoutError);
+    if (!response.ok) {
+        await throwSessionApiError(response, ErrorMessages.logoutError);
+    }
     // https://docs.allauth.org/_allauth/{client}/v1/auth/session
 }
 
@@ -288,8 +305,7 @@ export async function sendRecoveryEmail(email: string) {
         },
     );
     if (!response.ok) {
-        const detail = await parseDetail(response);
-        throw new Error(detail || ErrorMessages.recoveryError);
+        await throwSessionApiError(response, ErrorMessages.recoveryError);
     }
     // https://docs.allauth.org/_allauth/browser/v1/auth/password/request
 }
