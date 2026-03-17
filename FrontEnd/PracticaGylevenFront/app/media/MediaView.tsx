@@ -20,6 +20,7 @@ export default function MediaView() {
     useEffect(() => {
         if (cargando) {
             try {
+                setError("");
                 MediaModdel.fetchDirectories().then(() => {
                     MediaModel.loadImportantPaths().then(() => {
                         let importantSet = new Set<string>();
@@ -29,7 +30,6 @@ export default function MediaView() {
                             }
                         });
                         setImportantPaths(importantSet);
-
                     });
                 });
             } catch (err) {
