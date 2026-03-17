@@ -67,7 +67,7 @@ function normalizeEntry(entry: ApiEntry): FileProps | DirectoryProps {
 }
 
 export async function fetchMediaTree() {
-    const response = await fetch(ApiHelper.API_URL + "registros/media-tree/", {
+    const response = await fetch(ApiHelper.API_URL + "/registros/media-tree/", {
         headers: ApiHelper.getJsonHeaders(false),
         credentials: "include",
     });
