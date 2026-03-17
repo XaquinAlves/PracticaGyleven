@@ -10,7 +10,10 @@ export default function ImportantFilesView() {
 
     useEffect(() => {
         if (cargando === undefined) {
-            MediaModel.loadImportantPaths().then(() => {
+            MediaModel.loadImportantPaths({
+                force: MediaModel.forceFetch,
+            }).then(() => {
+                MediaModel.forceFetch = false;
                 setCargando(false);
             });
         }
@@ -80,10 +83,6 @@ export function ImportantFilesTable({ important_files }: ImportantTableProps) {
             </table>
         );
     } else {
-        return (
-            <div className="alert">
-                Carganddo
-            </div>
-        )
+        return <div className="alert">Carganddo</div>;
     }
 }

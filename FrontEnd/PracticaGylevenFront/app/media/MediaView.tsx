@@ -14,6 +14,8 @@ export default function MediaView() {
     const [cargando, setCargando] = useState<boolean>(
         MediaModdel.directories === undefined || importantPaths.size === 0,
     );
+
+
     useEffect(() => {
         if (cargando) {
             MediaModdel.fetchDirectories().then(() => {
@@ -55,7 +57,7 @@ export default function MediaView() {
             if (!response.ok) {
                 throw new Error(response.statusText);
             }
-
+            MediaModdel.forceFetch = true;
             setImportantPaths((previous) => {
                 const next = new Set(previous);
                 if (currentlyImportant) {

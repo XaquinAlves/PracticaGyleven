@@ -28,63 +28,84 @@ export interface ImportantTableProps {
 export default class MediaModel {
     static directories: DirectoryProps;
     static important_files: ImportantFile[];
+    static directoriesPromise: Promise<void> | null = null;
+    static importantFilesPromise: Promise<void> | null = null;
+    static forceFetch = false;
 
-    static fetchDirectories = async () => {
-        try {
-            const response = await fetch(
-                ApiHelper.API_URL + "/registros/media-tree/",
-                {
-                    headers: ApiHelper.getJsonHeaders(false),
-                    credentials: "include",
-                },
-            );
-
-            if (response.ok) {
-                const data = await response.json();
-                MediaModel.directories = {
-                    name: "media",
-                    type: "directory",
-                    relativePath: "",
-                    children: (data || []).map((entry: ApiEntry) =>
-                        normalizeEntry(entry),
-                    ),
-                };
-            } else {
-                throw Error(response.statusText);
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Error de red al obtener los directorios");
+    static fetchDirectories = (options?: { force?: boolean }) => {
+        if (!options?.force && MediaModel.directoriesPromise) {
+            return MediaModel.directoriesPromise;
         }
-    };
 
-    static loadImportantPaths = async () => {
-        try {
-            const response = await fetch(
-                ApiHelper.API_URL + "/registros/media/important-files/",
-                {
-                    headers: ApiHelper.getJsonHeaders(false),
-                    credentials: "include",
-                },
-            );
-            if (response.ok) {
-                const data = await response.json();
-                let filtered_files = data.filter(
-                    (file: ImportantFile) => {
-                        return file.is_important;
+        MediaModel.directoriesPromise = (async () => {
+            try {
+                const response = await fetch(
+                    ApiHelper.API_URL + "/registros/media-tree/",
+                    {
+                        headers: ApiHelper.getJsonHeaders(false),
+                        credentials: "include",
                     },
                 );
-                MediaModel.important_files = filtered_files;
-            } else {
-                console.log(response.statusText)
-                throw new Error(response.statusText);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    MediaModel.directories = {
+                        name: "media",
+                        type: "directory",
+                        relativePath: "",
+                        children: (data || []).map((entry: ApiEntry) =>
+                            normalizeEntry(entry),
+                        ),
+                    };
+                } else {
+                    throw Error(response.statusText);
+                }
+            } catch (err) {
+                MediaModel.directoriesPromise = null;
+                console.error(err);
+                alert("Error de red al obtener los directorios");
             }
-        } catch (err) {
-            console.error(err);
-            alert(
-                "No se pudieron cargar los archivos marcados como importantes",
-            );
+        })();
+
+        return MediaModel.directoriesPromise;
+    };
+
+    static loadImportantPaths = (options?: { force?: boolean }) => {
+        if (!options?.force && MediaModel.importantFilesPromise) {
+            return MediaModel.importantFilesPromise;
         }
+
+        MediaModel.importantFilesPromise = (async () => {
+            try {
+                const response = await fetch(
+                    ApiHelper.API_URL + "/registros/media/important-files/",
+                    {
+                        headers: ApiHelper.getJsonHeaders(false),
+                        credentials: "include",
+                    },
+                );
+                if (response.ok) {
+                    const data = await response.json();
+                    let filtered_files = data.filter(
+                        (file: ImportantFile) => {
+                            return file.is_important;
+                        },
+                    );
+                    MediaModel.important_files = filtered_files;
+                } else {
+                    console.log(response.statusText);
+                    throw new Error(response.statusText);
+                }
+            } catch (err) {
+                MediaModel.importantFilesPromise = null;
+                console.error(err);
+                alert(
+                    "No se pudieron cargar los archivos marcados como importantes",
+                );
+            }
+        })();
+
+        return MediaModel.importantFilesPromise;
     };
 }
 
