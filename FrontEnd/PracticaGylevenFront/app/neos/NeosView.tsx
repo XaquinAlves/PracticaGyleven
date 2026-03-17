@@ -35,6 +35,7 @@ export default function NeosView() {
         event: ChangeEvent<HTMLInputElement, HTMLInputElement>,
     ) {
         setPage(parseInt(event.target.value));
+        setError("");
         setCargando(true);
     }
 
@@ -70,6 +71,7 @@ export default function NeosView() {
                     ) : error ? (
                         <div className="alert alert-danger">
                             {error}
+                            <button type="button" className="btn btn-primary" onClick={() => setCargando(true)}>Reintentar</button>
                         </div>
                     ) : (
                         <p className="text-muted">
