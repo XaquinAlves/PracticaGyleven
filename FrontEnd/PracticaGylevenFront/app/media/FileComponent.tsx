@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FileProps } from "./MediaModel";
 import ApiHelper from "~/common/ApiHelper";
+import { ErrorMessages } from "~/common/messageCatalog";
 
 interface FileComponentProps {
     file: FileProps;
@@ -72,9 +73,7 @@ export default function FileComponent({
             setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
         } catch (err) {
             console.error(err);
-            alert(
-                "No pudimos abrir el archivo. Se descargar� en su lugar.",
-            );
+            alert(ErrorMessages.downloadFallback);
         } finally {
             setIsFetching(false);
         }

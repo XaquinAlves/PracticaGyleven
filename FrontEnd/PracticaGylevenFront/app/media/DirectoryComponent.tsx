@@ -3,6 +3,7 @@ import FileComponent from "./FileComponent";
 import { isDirectory, toggleImportantFile } from "./MediaModel";
 import { useCallback, useMemo, useState } from "react";
 import ErrorAlert from "~/common/ErrorAlert";
+import { ErrorMessages } from "~/common/messageCatalog";
 import { useMedia } from "./useMedia";
 import { publishMediaTreeUpdate } from "./mediaUpdates";
 
@@ -38,7 +39,7 @@ const handleToggleImportant = useCallback(
             const message =
                 err instanceof Error
                     ? err.message
-                    : "Error al alternar favorito";
+                    : ErrorMessages.toggleImportant;
             console.error(message);
             setToggleError(message);
         }

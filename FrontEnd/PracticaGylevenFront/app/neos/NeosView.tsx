@@ -2,6 +2,7 @@
 import NeosTable from "./Neo";
 import { useEffect, useState, type ChangeEvent } from "react";
 import ErrorAlert from "~/common/ErrorAlert";
+import { ErrorMessages } from "~/common/messageCatalog";
 import {
     type NeosContextValue,
     NeosProvider,
@@ -46,21 +47,19 @@ export function NeosViewContent({
         setPageInput(rawValue);
 
         if (!rawValue.trim()) {
-            setPageError("Introduce un nÃºmero de pÃ¡gina.");
+            setPageError(ErrorMessages.invalidPageNumber);
             return;
         }
 
         if (!/^-?\\d+$/.test(rawValue)) {
-            setPageError("Solo se permiten enteros.");
+            setPageError(ErrorMessages.integersOnly);
             return;
         }
 
         const numericValue = Number(rawValue);
 
         if (numericValue < MIN_NEOS_PAGE || numericValue > MAX_NEOS_PAGE) {
-            setPageError(
-                `El valor debe estar entre ${MIN_NEOS_PAGE} y ${MAX_NEOS_PAGE}.`,
-            );
+            setPageError(ErrorMessages.pageRange(MIN_NEOS_PAGE, MAX_NEOS_PAGE));
             return;
         }
 
@@ -81,7 +80,7 @@ export function NeosViewContent({
             setSuccessMessage("Datos guardados correctamente.");
         } catch (err) {
             setSaveError(
-                err instanceof Error ? err.message : "Error al guardar los datos.",
+                err instanceof Error ? err.message : ErrorMessages.saveNeos,
             );
         } finally {
             setSaving(false);
@@ -119,7 +118,7 @@ export function NeosViewContent({
         );
     } else {
         content = (
-            <p className="text-muted">No se han cargado los datos todavÃ­a.</p>
+            <p className="text-muted">{ErrorMessages.emptyNeos}</p>
         );
     }
 
