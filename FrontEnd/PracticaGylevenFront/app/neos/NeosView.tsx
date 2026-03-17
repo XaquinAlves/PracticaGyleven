@@ -13,7 +13,6 @@ export default function NeosView() {
     );
     const [page, setPage] = useState<number>(0);
     const [error, setError] = useState<string>("");
-    const neos = NeosModel.neos;
 
     useEffect(() => {
         if (cargando) {
@@ -66,12 +65,18 @@ export default function NeosView() {
                         >
                             <span className="visually-hidden">Cargando...</span>
                         </div>
-                    ) : neos ? (
-                        <NeosTable neos={neos.neos} />
+                    ) : NeosModel.neos ? (
+                        <NeosTable neos={NeosModel.neos.neos} />
                     ) : error ? (
                         <div className="alert alert-danger">
                             {error}
-                            <button type="button" className="btn btn-primary" onClick={() => setCargando(true)}>Reintentar</button>
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={() => setCargando(true)}
+                            >
+                                Reintentar
+                            </button>
                         </div>
                     ) : (
                         <p className="text-muted">

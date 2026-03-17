@@ -15,21 +15,28 @@ export default function MediaView() {
         MediaModdel.directories === undefined || importantPaths.size === 0,
     );
 
+    const [error, setError] = useState<string>("");
 
     useEffect(() => {
         if (cargando) {
-            MediaModdel.fetchDirectories().then(() => {
-                MediaModel.loadImportantPaths().then(() => {
-                    let importantSet = new Set<string>();
-                    MediaModdel.important_files.forEach((file) => {
-                        if (file.is_important) {
-                            importantSet.add(file.relative_path);
-                        }
+            try {
+                MediaModdel.fetchDirectories().then(() => {
+                    MediaModel.loadImportantPaths().then(() => {
+                        let importantSet = new Set<string>();
+                        MediaModdel.important_files.forEach((file) => {
+                            if (file.is_important) {
+                                importantSet.add(file.relative_path);
+                            }
+                        });
+                        setImportantPaths(importantSet);
+
                     });
-                    setImportantPaths(importantSet);
-                    setCargando(false);
                 });
-            });
+            } catch (err) {
+                setError(err instanceof Error ? err.message : String(err));
+            } finally {
+                setCargando(false);
+            }
         }
     }, [cargando]);
 
@@ -92,12 +99,27 @@ export default function MediaView() {
                         >
                             <span className="visually-hidden">Cargando...</span>
                         </div>
-                    ) : (
+                    ) : MediaModdel.directories ? (
                         <DirectoryComponent
                             directory={MediaModdel.directories}
                             importantPaths={importantPaths}
                             onToggleImportant={handleToggleImportant}
                         />
+                    ) : error ? (
+                        <div className="alert alert-danger">
+                            {error}
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={() => setCargando(true)}
+                            >
+                                Reintentar
+                            </button>
+                        </div>
+                    ) : (
+                        <p className="text-muted">
+                            No se han cargado los datos todavía.
+                        </p>
                     )}
                 </div>
             </div>
