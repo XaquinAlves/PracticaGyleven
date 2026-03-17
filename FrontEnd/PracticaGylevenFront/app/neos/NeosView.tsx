@@ -4,7 +4,6 @@ import {
     useEffect,
     useState,
     type ChangeEvent,
-    type SetStateAction,
 } from "react";
 import NeosModel from "./NeosModel";
 
@@ -12,14 +11,21 @@ export default function NeosView() {
     const [cargando, setCargando] = useState<boolean>(
         NeosModel.neos === undefined,
     );
-    const [page, setPage] = useState<number>(0)
+    const [page, setPage] = useState<number>(0);
+    const [error, setError] = useState<string>("");
     const neos = NeosModel.neos;
 
     useEffect(() => {
         if (cargando) {
             const neos = async () => {
-                await NeosModel.fetchNeos(page);
-                setCargando(false);
+                try {
+                    setError("");
+                    await NeosModel.fetchNeos(page);
+                } catch (err) {
+                    setError(err instanceof Error ? err.message : String(err));
+                } finally {
+                    setCargando(false);
+                }
             };
             neos();
         }
@@ -50,9 +56,7 @@ export default function NeosView() {
                         />
                     </div>
                 </div>
-                <div>
-                    {NeosModel.error !=="" && <small className="text-danger">{NeosModel.error}</small>}
-                </div>
+
                 <div className="col-12 col-md-12 mt-5">
                     {cargando ? (
                         <div
@@ -63,6 +67,10 @@ export default function NeosView() {
                         </div>
                     ) : neos ? (
                         <NeosTable neos={neos.neos} />
+                    ) : error ? (
+                        <div className="alert alert-danger">
+                            {error}
+                        </div>
                     ) : (
                         <p className="text-muted">
                             No se han cargado los datos todavía.

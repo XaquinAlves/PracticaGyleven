@@ -18,7 +18,6 @@ export interface NeosTableProps {
 
 export default class NeosModel {
     static neos?: NeosResponse;
-    static error = "";
 
     static fetchNeos = async (page: number) => {
         try {
@@ -33,7 +32,6 @@ export default class NeosModel {
                 const data = await response.json();
                 this.neos = data;
             } else {
-                NeosModel.error = response.statusText
                 throw Error(response.statusText);
             }
         } catch (err) {
@@ -58,7 +56,6 @@ export default class NeosModel {
             if (response.ok) {
                 alert("Datos guardados correctamente.");
             } else {
-                NeosModel.error = response.statusText;
                 throw Error(response.statusText);
             }
         } catch (err) {
