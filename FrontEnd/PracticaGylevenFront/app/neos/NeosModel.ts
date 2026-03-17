@@ -1,5 +1,8 @@
 import ApiHelper from "~/common/ApiHelper";
 import { ErrorMessages } from "~/common/messageCatalog";
+import { parseApiError } from "~/common/apiError";
+
+// TODO: cualquier respuesta de error proveniente de estos endpoints adopta { status, detail, code, errors } (documentado en app/common/apiErrorFormat.md).
 
 export interface NeoItem {
     id: number;
@@ -25,9 +28,8 @@ export async function fetchNeos(page: number) {
         credentials: "include",
     });
     if (!response.ok) {
-        throw new Error(
-            (await parseDetail(response)) || ErrorMessages.genericFetch,
-        );
+        const apiError = await parseApiError(response);
+        throw new Error(apiError.detail || ErrorMessages.genericFetch);
     }
     return (await response.json()) as NeosResponse;
 }
@@ -42,9 +44,8 @@ export async function saveNeos(neos: NeosResponse) {
         body: JSON.stringify(neos),
     });
     if (!response.ok) {
-        throw new Error(
-            (await parseDetail(response)) || ErrorMessages.saveNeos,
-        );
+        const apiError = await parseApiError(response);
+        throw new Error(apiError.detail || ErrorMessages.saveNeos);
     }
 }
 

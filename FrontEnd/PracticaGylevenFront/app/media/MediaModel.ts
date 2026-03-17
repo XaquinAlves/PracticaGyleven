@@ -1,5 +1,7 @@
 import ApiHelper from  "~/common/ApiHelper";
 import { ErrorMessages } from "~/common/messageCatalog";
+import { parseApiError } from "~/common/apiError";
+// See app/common/apiErrorFormat.md for el esquema compartido { status, detail, code, errors } que valida parseApiError.
 
 export interface FileProps {
     name: string;
@@ -73,7 +75,8 @@ export async function fetchMediaTree() {
         credentials: "include",
     });
     if (!response.ok) {
-        throw new Error(response.statusText || ErrorMessages.mediaError);
+        const apiError = await parseApiError(response);
+        throw new Error(apiError.detail || ErrorMessages.mediaError);
     }
     const data: ApiEntry[] = await response.json();
     return data.map(normalizeEntry);
@@ -88,7 +91,8 @@ export async function fetchImportantFiles() {
         },
     );
     if (!response.ok) {
-        throw new Error(ErrorMessages.genericFetch);
+        const apiError = await parseApiError(response);
+        throw new Error(apiError.detail || ErrorMessages.genericFetch);
     }
     const data: ImportantFile[] = await response.json();
     return data.filter((file) => file.is_important);
@@ -104,7 +108,8 @@ export async function fetchMediaTreeVersion() {
         },
     );
     if (!response.ok) {
-        throw new Error(response.statusText || ErrorMessages.genericFetch);
+        const apiError = await parseApiError(response);
+        throw new Error(apiError.detail || ErrorMessages.genericFetch);
     }
     const data = await response.json();
     return data.tree_version ?? "";
@@ -130,8 +135,9 @@ export async function toggleImportantFile(
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
+        const apiError = await parseApiError(response);
         const message =
-            data?.detail || response.statusText || ErrorMessages.toggleImportant;
+            apiError.detail || response.statusText || ErrorMessages.toggleImportant;
         throw new Error(message);
     }
 

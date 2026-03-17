@@ -1,0 +1,1 @@
+﻿from pathlib import Path\ntext = Path('BackEnd/registros/views.py').read_text(encoding='utf-8')\nlines = text.splitlines()\nfor i in range(430, 520):\n    if i < len(lines):\n        print(f'{i+1}: {lines[i]}')\n

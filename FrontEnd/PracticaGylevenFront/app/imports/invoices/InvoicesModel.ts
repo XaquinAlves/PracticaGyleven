@@ -1,5 +1,7 @@
 import ApiHelper from "~/common/ApiHelper";
 import { ErrorMessages } from "~/common/messageCatalog";
+import { parseApiError } from "~/common/apiError";
+// Este servicio respeta el formato documentado en app/common/apiErrorFormat.md
 
 export interface InvoiceProps {
     name: string;
@@ -25,7 +27,8 @@ export async function fetchInvoices() {
         },
     );
     if (!response.ok) {
-        throw new Error(response.statusText || ErrorMessages.invoicesFetch);
+        const apiError = await parseApiError(response);
+        throw new Error(apiError.detail || ErrorMessages.invoicesFetch);
     }
     return (await response.json()) as InvoiceProps[];
 }

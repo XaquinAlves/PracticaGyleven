@@ -155,8 +155,25 @@ def _compute_media_tree_version() -> str:
 
 
 
+def _format_error(
+    detail: str,
+    status_code: int = status.HTTP_400_BAD_REQUEST,
+    code: str | None = None,
+    errors: dict[str, list[str]] | None = None,
+):
+    payload: dict[str, Any] = {
+        "detail": detail,
+        "status": status_code,
+    }
+    if code:
+        payload["code"] = code
+    if errors:
+        payload["errors"] = errors
+    return Response(payload, status=status_code)
+
+
 def _json_error(detail: str, status_code: int = status.HTTP_400_BAD_REQUEST):
-    return Response({"detail": detail}, status=status_code)
+    return _format_error(detail, status_code)
 
 
 def _sanitize_target_dir(raw_dir: str | None) -> str:
@@ -268,9 +285,10 @@ def get_neos(request):
         return JsonResponse({"neos": neos})
     except requests.RequestException as exc:
         logger.exception("Failed to fetch NEOS: %s", exc)
-        return Response(
-            {"detail": "No se pudo obtener los asteroides cercanos"},
-            status=status.HTTP_502_BAD_GATEWAY,
+        return _format_error(
+            "No se pudo obtener los asteroides cercanos",
+            status.HTTP_502_BAD_GATEWAY,
+            code="NEO_FETCH_FAILED",
         )
 
 def get_neos_by_page(request, page):
@@ -317,9 +335,10 @@ def get_neos_by_page(request, page):
         return JsonResponse({"neos": neos})
     except requests.RequestException as exc:
         logger.exception("Failed to fetch NEOS page %s: %s", page_number, exc)
-        return Response(
-            {"detail": "No se pudo obtener los asteroides cercanos"},
-            status=status.HTTP_502_BAD_GATEWAY,
+        return _format_error(
+            "No se pudo obtener los asteroides cercanos",
+            status.HTTP_502_BAD_GATEWAY,
+            code="NEO_FETCH_PAGE_FAILED",
         )
 
 def save_neos(request):
@@ -346,9 +365,10 @@ def save_neos(request):
             neo_obj.save()
     except Exception as exc:
         logger.exception("Failed to save NEOS: %s", exc)
-        return Response(
-            {"detail": "Error al guardar los NEOs"},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        return _format_error(
+            "Error al guardar los NEOs",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="NEO_SAVE_FAILED",
         )
     return JsonResponse({"detail": "NEOs saved successfully."})
 
@@ -380,9 +400,10 @@ def list_facturas(request):
         return Response(records)
     except Exception as exc:
         logger.error("Failed to read invoices CSV %s: %s", invoices_path, exc)
-        return Response(
-            {"detail": "No se pudo leer la lista de facturas"},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        return _format_error(
+            "No se pudo leer la lista de facturas",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="INVOICES_READ_FAILED",
         )
 
 
@@ -392,13 +413,18 @@ def upload_to_media(request):
     try:
         target_dir = _sanitize_target_dir(request.data.get("target_dir"))
     except ValueError as exc:
-        return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return _format_error(
+            str(exc),
+            status.HTTP_400_BAD_REQUEST,
+            code="INVALID_MEDIA_PAYLOAD",
+        )
 
     files = request.FILES.getlist("files") or request.FILES.getlist("pdfs")
     if not files:
-        return Response(
-            {"detail": "No se ha enviado ningún archivo."},
-            status=status.HTTP_400_BAD_REQUEST,
+        return _format_error(
+            "No se ha enviado ningún archivo.",
+            status.HTTP_400_BAD_REQUEST,
+            code="FILES_REQUIRED",
         )
 
     try:
@@ -493,9 +519,10 @@ def upload_to_media(request):
         return Response(saved_items, status=status.HTTP_201_CREATED)
     except Exception as exc:
         logger.exception("Failed to upload media files: %s", exc)
-        return Response(
-            {"detail": "No se pudo subir los archivos."},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        return _format_error(
+            "No se pudo subir los archivos.",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="MEDIA_UPLOAD_FAILED",
         )
 
 @api_view(["POST"])
@@ -513,9 +540,10 @@ def leer_factura_pdf(request):
     ]
 
     if not valid_files:
-        return Response(
-            {"error": "Falta el archivo PDF o el formato no es válido"},
-            status=status.HTTP_400_BAD_REQUEST,
+        return _format_error(
+            "Falta el archivo PDF o el formato no es válido",
+            status.HTTP_400_BAD_REQUEST,
+            code="PDF_REQUIRED",
         )
     try:
         facturas_dir = os.path.join(settings.MEDIA_ROOT, "Facturas")
@@ -558,9 +586,10 @@ def leer_factura_pdf(request):
         return Response(invoice_rows)
     except Exception as exc:
         logger.exception("Failed to process invoices: %s", exc)
-        return Response(
-            {"detail": "Error al procesar las facturas"},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        return _format_error(
+            "Error al procesar las facturas",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="INVOICE_PROCESS_FAILED",
         )
 
 @api_view(["GET"])
@@ -574,9 +603,10 @@ def list_media_structure(request):
         return Response(tree)
     except Exception as exc:
         logger.exception("Failed to build media structure: %s", exc)
-        return Response(
-            {"detail": "Error al obtener la estructura de medios"},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        return _format_error(
+            "Error al obtener la estructura de medios",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="MEDIA_STRUCTURE_FAILED",
         )
 
 
@@ -588,9 +618,10 @@ def media_tree_version(request):
         return Response({"tree_version": version})
     except Exception as exc:
         logger.exception("Failed to compute media tree version: %s", exc)
-        return Response(
-            {"detail": "Error al calcular la versión de medios"},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        return _format_error(
+            "Error al calcular la versión de medios",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="MEDIA_VERSION_FAILED",
         )
 
 
@@ -622,20 +653,26 @@ def download_media_file(request):
     #Obtiene el parametro de la ruta del archivo a descargar, y comprueba que es válido
     relative_path = request.query_params.get("path")
     if not relative_path:
-        return Response(
-            {"detail": "Se requiere el parámetro 'path'"},
-            status=status.HTTP_400_BAD_REQUEST,
+        return _format_error(
+            "Se requiere el parámetro 'path'",
+            status.HTTP_400_BAD_REQUEST,
+            code="MISSING_PATH",
         )
     try:
         sanitized = _sanitize_relative_path(relative_path)
     except ValueError as exc:
-        return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return _format_error(
+            str(exc),
+            status=status.HTTP_400_BAD_REQUEST,
+            code="INVALID_PATH",
+        )
 
     file_path = Path(settings.MEDIA_ROOT) / sanitized
     if not file_path.exists() or not file_path.is_file():
-        return Response(
-            {"detail": "Archivo no encontrado"},
-            status=status.HTTP_404_NOT_FOUND,
+        return _format_error(
+            "Archivo no encontrado",
+            status.HTTP_404_NOT_FOUND,
+            code="FILE_NOT_FOUND",
         )
 
     #Comprobado que el archivo existe, comprueba si es visualizable por el navegadir
@@ -680,9 +717,10 @@ def list_important_files(request):
         return Response(records)
     except Exception as exc:
         logger.exception("Failed to read important files: %s", exc)
-        return Response(
-            {"detail": "Error al cargar archivos importantes"},
+        return _format_error(
+            "Error al cargar archivos importantes",
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="IMPORTANT_FILES_FAILED",
         )
 
 
@@ -693,20 +731,26 @@ def toggle_important_file(request):
     important_flag = request.data.get("important")
 
     if not relative_path or not isinstance(relative_path, str):
-        return Response(
-            {"detail": "Campo 'relative_path' obligatorio"},
+        return _format_error(
+            "Campo 'relative_path' obligatorio",
             status=status.HTTP_400_BAD_REQUEST,
+            code="RELATIVE_PATH_REQUIRED",
         )
 
     try:
         sanitized_path = _sanitize_relative_path(relative_path)
     except ValueError as exc:
-        return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return _format_error(
+            str(exc),
+            status=status.HTTP_400_BAD_REQUEST,
+            code="INVALID_RELATIVE_PATH",
+        )
 
     if important_flag is None:
-        return Response(
-            {"detail": "Campo 'important' obligatorio"},
+        return _format_error(
+            "Campo 'important' obligatorio",
             status=status.HTTP_400_BAD_REQUEST,
+            code="IMPORTANT_FLAG_REQUIRED",
         )
 
     if isinstance(important_flag, str):
@@ -759,7 +803,8 @@ def toggle_important_file(request):
         )
     except Exception as exc:
         logger.exception("Failed to toggle important file: %s", exc)
-        return Response(
-            {"detail": "Error al marcar el archivo importante"},
+        return _format_error(
+            "Error al marcar el archivo importante",
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="IMPORTANT_FILE_TOGGLE_FAILED",
         )
