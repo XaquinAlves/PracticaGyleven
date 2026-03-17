@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { whoami, logout } from "../session/SessionController";
+import { whoami, logout, get_username } from "../session/SessionController";
 import { useState, useEffect } from "react";
 
 export default function Sidebar() {
@@ -7,7 +7,7 @@ export default function Sidebar() {
 
     useEffect(() => {
         const obtenerUsername = async () => {
-            const username = await whoami();
+            const username = await get_username();
             setUsername(username);
         };
         obtenerUsername();

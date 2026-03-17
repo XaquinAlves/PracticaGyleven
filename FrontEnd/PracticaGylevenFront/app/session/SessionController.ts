@@ -28,6 +28,28 @@ export async function whoami() {
     // https://docs.allauth.org/_allauth/{client}/v1/auth/session
 }
 
+export async function get_username() {
+    try {
+        const response = await fetch(
+            ApiHelper.API_URL + "/_allauth/browser/v1/auth/session",
+            {
+                headers: ApiHelper.getJsonHeaders(false),
+                credentials: "include",
+            },
+        );
+        if (response.ok) {
+            const data = await response.json();
+            return data.data.user.username;
+        } else {
+            return "";
+        }
+    } catch (err) {
+        console.error(err);
+        return "";
+    }
+    // https://docs.allauth.org/_allauth/{client}/v1/auth/session
+}
+
 export async function changePass(
     event: React.SubmitEvent<HTMLFormElement>,
     oldPassword: string,
