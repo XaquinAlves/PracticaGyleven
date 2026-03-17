@@ -6,6 +6,7 @@ import {
     type ChangeEvent,
 } from "react";
 import NeosModel from "./NeosModel";
+import ErrorAlert from "~/common/ErrorAlert";
 
 export default function NeosView() {
     const [cargando, setCargando] = useState<boolean>(
@@ -68,16 +69,7 @@ export default function NeosView() {
                     ) : NeosModel.neos ? (
                         <NeosTable neos={NeosModel.neos.neos} />
                     ) : error ? (
-                        <div className="alert alert-danger">
-                            {error}
-                            <button
-                                type="button"
-                                className="btn btn-primary"
-                                onClick={() => setCargando(true)}
-                            >
-                                Reintentar
-                            </button>
-                        </div>
+                        <ErrorAlert message={error} onRetry={() => setCargando(true)} />
                     ) : (
                         <p className="text-muted">
                             No se han cargado los datos todavía.

@@ -237,7 +237,7 @@ export async function logout() {
         }
     } catch (err) {
         console.error(err);
-        alert("Error de red al cerrar sesión.");
+        throw err;
     }
     // https://docs.allauth.org/_allauth/{client}/v1/auth/session
 }

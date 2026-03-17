@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router";
 import { login, loginGoogle } from "./SessionController";
 import { useState } from "react";
+import ErrorAlert from "~/common/ErrorAlert";
 let username = "";
 let password = "";
 
@@ -14,6 +15,11 @@ export default function Login() {
                 <div className="card mt-5">
                     <h5 className="card-header">Iniciar Sesión</h5>
                     <div className="card-body">
+                        {error && (
+                            <div className="mt-3">
+                                <ErrorAlert message={error} />
+                            </div>
+                        )}
                         <form
                             onSubmit={(event) =>
                                 login(
@@ -46,13 +52,6 @@ export default function Login() {
                                     name="password"
                                     onChange={handlePasswordChange}
                                 />
-                                <div>
-                                    {error && (
-                                        <small className="text-danger">
-                                            {error}
-                                        </small>
-                                    )}
-                                </div>
                             </div>
                             <button
                                 type="submit"

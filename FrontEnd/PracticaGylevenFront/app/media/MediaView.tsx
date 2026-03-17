@@ -4,6 +4,7 @@ import DirectoryComponent from "./DirectoryComponent";
 import MediaUploadForm from "./MediaUploadForm";
 import MediaModel from "./MediaModel";
 import ApiHelper from "~/common/ApiHelper";
+import ErrorAlert from "~/common/ErrorAlert";
 
 export default function MediaView() {
     const [importantPaths, setImportantPaths] = useState<Set<string>>(
@@ -147,16 +148,7 @@ export default function MediaView() {
                             onToggleImportant={handleToggleImportant}
                         />
                     ) : error ? (
-                        <div className="alert alert-danger">
-                            {error}
-                            <button
-                                type="button"
-                                className="btn btn-primary"
-                                onClick={() => handleChanges()}
-                            >
-                                Reintentar
-                            </button>
-                        </div>
+                        <ErrorAlert message={error} onRetry={handleChanges} />
                     ) : (
                         <p className="text-muted">
                             No se han cargado los datos todavía.

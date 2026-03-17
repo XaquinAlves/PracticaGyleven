@@ -4,6 +4,7 @@ import MediaModel, {
     type ImportantTableProps,
 } from "./MediaModel";
 import Sidebar from "~/common/Sidebar";
+import ErrorAlert from "~/common/ErrorAlert";
 
 export default function ImportantFilesView() {
     const [cargando, setCargando] = useState<boolean>(true);
@@ -44,16 +45,11 @@ export default function ImportantFilesView() {
                             <span className="visually-hidden">Cargando...</span>
                         </div>
                     ) : error ? (
-                        <div className="alert alert-danger">
-                            {error}
-                            <button
-                                type="button"
-                                className="btn btn-sm btn-primary ms-3"
-                                onClick={() => setCargando(true)}
-                            >
-                                Reintentar
-                            </button>
-                        </div>
+                        <ErrorAlert
+                            message={error}
+                            onRetry={() => setCargando(true)}
+                            className="btn-sm"
+                        />
                     ) : (
                         <ImportantFilesTable
                             important_files={MediaModel.important_files || []}
