@@ -59,7 +59,7 @@ export async function changePass(
     event.preventDefault();
 
     if (newPassword !== repeatPassword) {
-        alert("Las contraseñas no coinciden");
+        throw new Error("Las contraseñas no coinciden");
     } else {
         try {
             await ApiHelper.ensureCSRF();
@@ -77,13 +77,13 @@ export async function changePass(
                 },
             );
             if (response.ok) {
-                alert("Contraseña cambiada correctamente");
+                return;
             } else {
                 throw Error(response.statusText);
             }
         } catch (err) {
             console.error(err);
-            alert("Error de red al cambiar la contraseña.");
+            throw err;
         }
     }
     // https://docs.allauth.org/_allauth/{client}/v1/account/password/change
@@ -95,15 +95,15 @@ export async function resetPass(
     repeatPassword: string,
     key: string,
 ) {
-    event.preventDefault();
-    if (password !== repeatPassword) {
-        alert("Las contraseñas no coinciden");
-    } else {
-        try {
-            await ApiHelper.ensureCSRF();
-            const response = await fetch(
-                ApiHelper.API_URL + "/_allauth/browser/v1/auth/password/reset",
-                {
+  event.preventDefault();
+  if (password !== repeatPassword) {
+        throw new Error("Las contraseñas no coinciden");
+  } else {
+      try {
+          await ApiHelper.ensureCSRF();
+          const response = await fetch(
+              ApiHelper.API_URL + "/_allauth/browser/v1/auth/password/reset",
+              {
                     method: "POST",
                     headers: ApiHelper.getJsonHeaders(),
                     credentials: "include",
@@ -111,19 +111,18 @@ export async function resetPass(
                         key: key,
                         password: password,
                     }),
-                },
-            );
-            if (response.ok) {
-                alert("Contraseña cambiada correctamente");
+              },
+          );
+          if (response.ok) {
                 window.location.reload();
-            } else {
-                throw Error(response.statusText);
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Error de red al cambiar la contraseña.");
-        }
-    }
+          } else {
+              throw Error(response.statusText);
+          }
+      } catch (err) {
+          console.error(err);
+            throw err;
+      }
+  }
     // https://docs.allauth.org/_allauth/{client}/v1/auth/password/reset
 }
 
@@ -132,14 +131,38 @@ export async function login(
     username: string,
     password: string,
     navigate: NavigateFunction,
-    setError: { (value: React.SetStateAction<string>): void; (arg0: string): void; }
 ) {
     event.preventDefault();
-    try {
-        await ApiHelper.ensureCSRF();
-        const response = await fetch(
-            ApiHelper.API_URL + "/_allauth/browser/v1/auth/login",
-            {
+    await ApiHelper.ensureCSRF();
+    const response = await fetch(
+        ApiHelper.API_URL + "/_allauth/browser/v1/auth/login",
+        {
+            method: "POST",
+            headers: ApiHelper.getJsonHeaders(),
+            credentials: "include",
+            body: JSON.stringify({
+                username: username,
+                password: password,
+            }),
+        },
+    );
+
+    if (response.status >= 200 && response.status <= 299) {
+        await response.json();
+        getSession();
+        window.location.reload();
+        return;
+    }
+
+    if (response.status === 401) {
+        const data = await response.json();
+        const mfaFlow = data?.data?.flows?.find(
+            (element: { id: string; is_pending?: boolean }) =>
+                element.id === "mfa_authenticate" && element.is_pending,
+        );
+        if (mfaFlow) {
+            await ApiHelper.ensureCSRF();
+            await fetch(ApiHelper.API_URL + "/api/get-totp/", {
                 method: "POST",
                 headers: ApiHelper.getJsonHeaders(),
                 credentials: "include",
@@ -147,43 +170,13 @@ export async function login(
                     username: username,
                     password: password,
                 }),
-            },
-        );
-        if (response.status >= 200 && response.status <= 299) {
-            const user_data = await response.json();
-            getSession();
-            window.location.reload();
-        } else if (response.status == 401) {
-            const data = await response.json();
-            let pending2fa = false;
-            const mfaFlow = data?.data?.flows?.find(
-                (element: { id: string; is_pending?: boolean }) =>
-                    element.id === "mfa_authenticate" && element.is_pending,
-            );
-            if (mfaFlow) {
-                pending2fa = true;
-                await ApiHelper.ensureCSRF();
-                await fetch(ApiHelper.API_URL + "/api/get-totp/", {
-                    method: "POST",
-                    headers: ApiHelper.getJsonHeaders(),
-                    credentials: "include",
-                    body: JSON.stringify({
-                        username: username,
-                        password: password,
-                    }),
-                });
-                navigate?.("/login-2fa");
-                return;
-            }
-        } else {
-            throw Error(response.statusText);
+            });
+            navigate?.("/login-2fa");
+            return;
         }
-    } catch (err) {
-        setError("Usuario y/o contraseña incorrectos")
-        console.error(err);
-        getSession();
     }
-    // https://docs.allauth.org/_allauth/{client}/v1/auth/login
+
+    throw new Error("Usuario y/o contraseña incorrectos");
 }
 
 export async function login2fa(
@@ -192,53 +185,42 @@ export async function login2fa(
 ) {
     //https://docs.allauth.org/_allauth/{client}/v1/auth/2fa/authenticate
     event.preventDefault();
-    try {
-        await ApiHelper.ensureCSRF();
-        const response = await fetch(
-            ApiHelper.API_URL + "/_allauth/browser/v1/auth/2fa/authenticate",
-            {
-                method: "POST",
-                headers: ApiHelper.getJsonHeaders(),
-                credentials: "include",
-                body: JSON.stringify({
-                    code: code,
-                }),
-            },
-        );
-        if (response.ok) {
-            const user_data = await response.json();
-            getSession();
-            window.location.reload();
-        } else {
-            throw Error(response.statusText);
-        }
-    } catch (err) {
-        console.error(err);
-        getSession();
+    await ApiHelper.ensureCSRF();
+    const response = await fetch(
+        ApiHelper.API_URL + "/_allauth/browser/v1/auth/2fa/authenticate",
+        {
+            method: "POST",
+            headers: ApiHelper.getJsonHeaders(),
+            credentials: "include",
+            body: JSON.stringify({
+                code: code,
+            }),
+        },
+    );
+    if (!response.ok) {
+        throw new Error("Código de autenticación incorrecto");
     }
+    await response.json();
+    getSession();
+    window.location.reload();
 }
 
 export async function logout() {
-    try {
-        await ApiHelper.ensureCSRF();
-        const response = await fetch(
-            ApiHelper.API_URL + "/_allauth/browser/v1/auth/session",
-            {
-                method: "DELETE",
-                headers: ApiHelper.getJsonHeaders(),
-                credentials: "include",
-            },
-        );
-        if (response.status === 401) {
-            getSession()
-            window.location.reload();
-        } else {
-            throw Error(response.statusText);
-        }
-    } catch (err) {
-        console.error(err);
-        throw err;
+    await ApiHelper.ensureCSRF();
+    const response = await fetch(
+        ApiHelper.API_URL + "/_allauth/browser/v1/auth/session",
+        {
+            method: "DELETE",
+            headers: ApiHelper.getJsonHeaders(),
+            credentials: "include",
+        },
+    );
+    if (response.status === 401) {
+        getSession();
+        window.location.reload();
+        return;
     }
+    throw new Error("No se pudo cerrar la sesión");
     // https://docs.allauth.org/_allauth/{client}/v1/auth/session
 }
 
@@ -247,27 +229,20 @@ export async function sendRecoveryEmail(
     event: React.SubmitEvent<HTMLFormElement>,
 ) {
     event.preventDefault();
-    try {
-        await ApiHelper.ensureCSRF();
-        const response = await fetch(
-            ApiHelper.API_URL + "/_allauth/browser/v1/auth/password/request",
-            {
-                method: "POST",
-                headers: ApiHelper.getJsonHeaders(),
-                credentials: "include",
-                body: JSON.stringify({
-                    email: event.target.email.value,
-                }),
-            },
-        );
-        if (response.ok) {
-            alert("Email enviado correctamente");
-        } else {
-            throw Error(response.statusText);
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Error al recuperar contraseña");
+    await ApiHelper.ensureCSRF();
+    const response = await fetch(
+        ApiHelper.API_URL + "/_allauth/browser/v1/auth/password/request",
+        {
+            method: "POST",
+            headers: ApiHelper.getJsonHeaders(),
+            credentials: "include",
+            body: JSON.stringify({
+                email: event.target.email.value,
+            }),
+        },
+    );
+    if (!response.ok) {
+        throw new Error("Error al recuperar contraseña");
     }
     // https://docs.allauth.org/_allauth/{client}/v1/auth/password/request
 }

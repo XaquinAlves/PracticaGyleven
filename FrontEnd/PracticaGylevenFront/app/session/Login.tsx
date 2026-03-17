@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router";
 import { login, loginGoogle } from "./SessionController";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import ErrorAlert from "~/common/ErrorAlert";
 let username = "";
 let password = "";
@@ -8,6 +8,15 @@ let password = "";
 export default function Login() {
     const navigate = useNavigate();
     const [error, setError] = useState<string>("");
+
+    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        try {
+            setError("");
+            await login(event, username, password, navigate);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Error en el login");
+        }
+    };
 
     return (
         <div className="row justify-content-center mt-5">
@@ -20,17 +29,7 @@ export default function Login() {
                                 <ErrorAlert message={error} />
                             </div>
                         )}
-                        <form
-                            onSubmit={(event) =>
-                                login(
-                                    event,
-                                    username,
-                                    password,
-                                    navigate,
-                                    setError,
-                                )
-                            }
-                        >
+                        <form onSubmit={handleSubmit}>
                             <div className="form-group mb-3">
                                 <label htmlFor="username">
                                     Nombre de usuario:
