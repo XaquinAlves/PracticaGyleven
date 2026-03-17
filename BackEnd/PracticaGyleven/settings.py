@@ -235,3 +235,7 @@ ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_RESEND = True;
 
 MFA_TOTP_PERIOD = 60;
 MFA_TOTP_TOLERANCE = 1;
+
+#Para la descarga de archivos, define el tamaño de bloque de descarga por deffecto
+MEDIA_DOWNLOAD_BLOCK_SIZE = 64 * 1024
+MEDIA_DOWNLOAD_BLOCK_SIZE_MAX = 512 * 1024

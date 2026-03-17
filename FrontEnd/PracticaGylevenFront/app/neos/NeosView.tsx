@@ -50,6 +50,9 @@ export default function NeosView() {
                         />
                     </div>
                 </div>
+                <div>
+                    {NeosModel.error !=="" && <small className="text-danger">{NeosModel.error}</small>}
+                </div>
                 <div className="col-12 col-md-12 mt-5">
                     {cargando ? (
                         <div

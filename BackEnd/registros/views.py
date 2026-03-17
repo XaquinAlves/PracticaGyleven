@@ -459,6 +459,7 @@ def list_media_structure(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def download_media_file(request):
+    #Obtiene el parametro de la ruta del archivo a descargar, y comprueba que es válido
     relative_path = request.query_params.get("path")
     if not relative_path:
         raise Http404("Se requiere el parámetro 'path'")
@@ -472,17 +473,35 @@ def download_media_file(request):
     if not file_path.exists() or not file_path.is_file():
         raise Http404("Archivo no encontrado")
 
+    #Comprobado que el archivo existe, comprueba si es visualizable por el navegadir
     mime_type, _ = guess_type(str(file_path))
     as_attachment = not _is_previewable_mime(mime_type)
+
+    #Define el tamaño de bloque de la descarga
+    raw_block = request.query_params.get("block_size")
+    default_block = getattr(settings, "MEDIA_DOWNLOAD_BLOCK_SIZE", 64 * 1024)
+    max_block_size = getattr(settings, "MEDIA_DOWNLOAD_BLOCK_SIZE_MAX", 512 * 1024)
+
+    try:
+        block_size = int(raw_block) if raw_block is not None else default_block
+    except ValueError:
+        block_size = default_block
+
+    block_size = max(1, min(block_size, max_block_size))
+
+    #Construimos la respuesta
     response = FileResponse(
         file_path.open("rb"),
         as_attachment=as_attachment,
         filename=file_path.name,
     )
+    response.block_size = block_size
     if mime_type:
         response["Content-Type"] = mime_type
     if not as_attachment:
         response["Content-Disposition"] = f'inline; filename="{file_path.name}"'
+
+    response["Content-Length"] = file_path.stat().st_size
 
     return response
 
