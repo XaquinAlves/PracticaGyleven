@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import os
@@ -129,6 +130,29 @@ def _build_media_tree(base_path: Path) -> list[dict[str, Any]]:
                 }
             )
     return entries
+
+
+def _collect_media_entries() -> list[str]:
+    media_root = Path(settings.MEDIA_ROOT)
+    if not media_root.exists():
+        return []
+    record = []
+    for file_path in media_root.rglob("*"):
+        if not file_path.is_file():
+            continue
+        stat_result = file_path.stat()
+        relative = file_path.relative_to(media_root).as_posix()
+        record.append(f"{relative}:{stat_result.st_mtime_ns}:{stat_result.st_size}")
+    return sorted(record)
+
+
+def _compute_media_tree_version() -> str:
+    entries = _collect_media_entries()
+    if not entries:
+        return ""
+    digest = hashlib.sha256(";".join(entries).encode("utf-8")).hexdigest()
+    return digest
+
 
 
 def _sanitize_target_dir(raw_dir: str | None) -> str:
@@ -454,6 +478,13 @@ def list_media_structure(request):
         return Response([], status=status.HTTP_200_OK)
     tree = _build_media_tree(media_root)
     return Response(tree)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def media_tree_version(request):
+    version = _compute_media_tree_version()
+    return Response({"tree_version": version})
 
 
 @api_view(["GET"])

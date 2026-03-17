@@ -56,7 +56,7 @@ export default function ImportantFilesView() {
                         </div>
                     ) : (
                         <ImportantFilesTable
-                            important_files={MediaModel.important_files}
+                            important_files={MediaModel.important_files || []}
                         />
                     )}
                 </div>

@@ -26,11 +26,41 @@ export interface ImportantTableProps {
 }
 
 export default class MediaModel {
-    static directories: DirectoryProps;
-    static important_files: ImportantFile[];
+    static directories?: DirectoryProps;
+    static important_files?: ImportantFile[];
     static directoriesPromise: Promise<void> | null = null;
     static importantFilesPromise: Promise<void> | null = null;
     static forceFetch = false;
+    static treeVersion = "";
+
+    static async updateTreeVersion(): Promise<boolean> {
+        try {
+            const version = await MediaModel.fetchTreeVersion();
+            if (!version) {
+                return false;
+            }
+            const changed = version !== MediaModel.treeVersion;
+            MediaModel.treeVersion = version;
+            return changed;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    static async fetchTreeVersion(): Promise<string> {
+        const response = await fetch(
+            ApiHelper.API_URL + "/registros/media-tree/version/",
+            {
+                headers: ApiHelper.getJsonHeaders(false),
+                credentials: "include",
+            },
+        );
+        if (!response.ok) {
+            throw new Error(response.statusText);
+        }
+        const data = await response.json();
+        return data.tree_version ?? "";
+    }
 
     static fetchDirectories = (options?: { force?: boolean }) => {
         if (!options?.force && MediaModel.directoriesPromise) {
@@ -46,26 +76,22 @@ export default class MediaModel {
                         credentials: "include",
                     },
                 );
-
-                if (response.ok) {
-                    const data = await response.json();
-                    MediaModel.directories = {
-                        name: "media",
-                        type: "directory",
-                        relativePath: "",
-                        children: (data || []).map((entry: ApiEntry) =>
-                            normalizeEntry(entry),
-                        ),
-                    };
-                } else {
-                    throw Error(response.statusText);
-                }
-        } catch (err) {
-            MediaModel.directoriesPromise = null;
-            console.error(err);
-            alert("Error de red al obtener los directorios");
-            throw err;
-        }
+                if (!response.ok) throw new Error(response.statusText);
+                const data = await response.json();
+                MediaModel.directories = {
+                    name: "media",
+                    type: "directory",
+                    relativePath: "",
+                    children: (data || []).map((entry: ApiEntry) =>
+                        normalizeEntry(entry),
+                    ),
+                };
+            } catch (err) {
+                MediaModel.directoriesPromise = null;
+                console.error(err);
+                alert("Error de red al obtener los directorios");
+                throw err;
+            }
         })();
 
         return MediaModel.directoriesPromise;
@@ -87,24 +113,22 @@ export default class MediaModel {
                 );
                 if (response.ok) {
                     const data = await response.json();
-                    let filtered_files = data.filter(
-                        (file: ImportantFile) => {
-                            return file.is_important;
-                        },
-                    );
+                    let filtered_files = data.filter((file: ImportantFile) => {
+                        return file.is_important;
+                    });
                     MediaModel.important_files = filtered_files;
                 } else {
                     console.log(response.statusText);
                     throw new Error(response.statusText);
                 }
-        } catch (err) {
-            MediaModel.importantFilesPromise = null;
-            console.error(err);
-            alert(
-                "No se pudieron cargar los archivos marcados como importantes",
-            );
-            throw err;
-        }
+            } catch (err) {
+                MediaModel.importantFilesPromise = null;
+                console.error(err);
+                alert(
+                    "No se pudieron cargar los archivos marcados como importantes",
+                );
+                throw err;
+            }
         })();
 
         return MediaModel.importantFilesPromise;

@@ -24,7 +24,7 @@ export default function MediaView() {
         const loadMedia = async () => {
             setError("");
             try {
-                await MediaModel.fetchDirectories({force: MediaModel.forceFetch});
+                await MediaModel.fetchDirectories({ force: MediaModel.forceFetch });
                 await MediaModel.loadImportantPaths({
                     force: MediaModel.forceFetch,
                 });
@@ -34,6 +34,7 @@ export default function MediaView() {
                         importantSet.add(file.relative_path);
                     }
                 });
+                await MediaModel.updateTreeVersion();
                 setImportantPaths(importantSet);
             } catch (err) {
                 setError(err instanceof Error ? err.message : String(err));
@@ -44,6 +45,33 @@ export default function MediaView() {
         };
 
         void loadMedia();
+    }, [cargando]);
+
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            if (cargando) {
+                return;
+            }
+
+            const checkForChanges = async () => {
+                try {
+                    const versionChanged = await MediaModel.updateTreeVersion();
+                    if (versionChanged) {
+                        MediaModel.forceFetch = true;
+                        setCargando(true);
+                    }
+                } catch (err) {
+                    console.error(
+                        "Error al comprobar cambios en el árbol de media",
+                        err,
+                    );
+                }
+            };
+
+            void checkForChanges();
+        }, 15000);
+
+        return () => clearInterval(intervalId);
     }, [cargando]);
 
     const handleToggleImportant = async (

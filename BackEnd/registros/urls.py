@@ -29,4 +29,9 @@ urlpatterns = [
         views.download_media_file,
         name="media-download",
     ),
+    path(
+        "media-tree/version/",
+        views.media_tree_version,
+        name="media-tree-version",
+    ),
 ]
