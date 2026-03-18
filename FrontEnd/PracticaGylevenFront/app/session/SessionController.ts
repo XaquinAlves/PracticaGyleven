@@ -171,6 +171,10 @@ export async function resetPass(
                 }),
             },
         );
+        if (response.status === 401) {
+            window.location.assign("/login");
+            return;
+        }
         if (!response.ok) {
             await throwSessionApiError(
                 response,
