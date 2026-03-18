@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.microsoft',
     'allauth.socialaccount.providers.google',
     'allauth.mfa',
+    'allauth.headless',
 ]
 
 MIDDLEWARE = [
@@ -182,6 +183,14 @@ AUTHENTICATION_BACKENDS = [
     # `allauth` specific authentication methods, such as login by email
     'allauth.account.auth_backends.AuthenticationBackend',
 ];
+
+# Front-end routes used by the headless views (allows the backend to build the reset-password link).
+HEADLESS_FRONTEND_URLS = {
+    "account_reset_password": "http://localhost:5173/recover-pass",
+    "account_reset_password_from_key": (
+        "http://localhost:5173/accounts/password/reset/key/{key}/"
+    ),
+}
 
 # Provider specific settings
 SOCIALACCOUNT_PROVIDERS = {

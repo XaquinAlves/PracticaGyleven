@@ -51,10 +51,10 @@ export function NeosViewContent({
             return;
         }
 
-        if (!/^-?\\d+$/.test(rawValue)) {
+        /* if (!/^-?\\d+$/.test(rawValue)) {
             setPageError(ErrorMessages.integersOnly);
             return;
-        }
+        } */
 
         const numericValue = Number(rawValue);
 

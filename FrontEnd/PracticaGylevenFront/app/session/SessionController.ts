@@ -3,7 +3,7 @@ import type { NavigateFunction } from "react-router";
 import { getSession } from "~/routes/home";
 import ApiHelper from "~/common/ApiHelper";
 import { ErrorMessages } from "~/common/messageCatalog";
-import { ApiErrorPayload, parseApiError } from "~/common/apiError";
+import { type ApiErrorPayload, parseApiError } from "~/common/apiError";
 
 export const PASSWORD_RULES = [
     "mínimo 8 caracteres",
