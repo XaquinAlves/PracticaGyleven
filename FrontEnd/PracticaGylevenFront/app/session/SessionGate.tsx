@@ -11,7 +11,7 @@ export default function SessionGate() {
             </div>
         );
     }
-    console.log(isLoading);
+
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
     }

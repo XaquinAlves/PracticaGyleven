@@ -11,7 +11,6 @@ export default function LoginGate() {
             </div>
         );
     }
-    console.log(isLoading);
 
     if (isAuthenticated) {
         return <Navigate to="/inicio" replace />;
