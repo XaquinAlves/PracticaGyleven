@@ -11,7 +11,7 @@ export default function ImportantFilesView() {
     );
 }
 
-function ImportantFilesViewContent() {
+export function ImportantFilesViewContent() {
     const { importantFiles, loading, error, refresh } = useMedia();
 
     return (

@@ -48,12 +48,13 @@ function formatApiObject(value: Record<string, unknown>) {
 export async function parseApiError(response: Response): Promise<ApiErrorPayload> {
     try {
         const payload = await response.clone().json();
+        const errorsMessage = flattenApiMessage(payload.errors);
         const detail =
+            errorsMessage ||
             flattenApiMessage(payload.detail) ||
             (typeof payload.message === "string"
                 ? payload.message
                 : undefined) ||
-            flattenApiMessage(payload.errors) ||
             response.statusText ||
             "Error del servidor";
         return {
