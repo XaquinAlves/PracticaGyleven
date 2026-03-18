@@ -18,7 +18,13 @@ function sanitizeId(value: string) {
 export default function DirectoryComponent({
     directory,
 }: DirectoryComponentProps) {
-    const { directories, importantFiles, refresh } = useMedia();
+    const {
+        directories,
+        importantFiles,
+        refresh,
+        toggleDirectory,
+        isDirectoryExpanded,
+    } = useMedia();
     const resolvedDirectory = directory ?? directories;
     const [toggleError, setToggleError] = useState("");
 
@@ -28,32 +34,36 @@ export default function DirectoryComponent({
         return next;
     }, [importantFiles]);
 
-const handleToggleImportant = useCallback(
-    async (relativePath: string, currentlyImportant: boolean) => {
-        setToggleError("");
-        try {
-            await toggleImportantFile(relativePath, !currentlyImportant);
-            await refresh();
-            publishMediaTreeUpdate();
-        } catch (err) {
-            const message =
-                err instanceof Error
-                    ? err.message
-                    : ErrorMessages.toggleImportant;
-            console.error(message);
-            setToggleError(message);
-        }
-    },
-    [refresh],
-);
+    const handleToggleImportant = useCallback(
+        async (relativePath: string, currentlyImportant: boolean) => {
+            setToggleError("");
+            try {
+                await toggleImportantFile(relativePath, !currentlyImportant);
+                await refresh();
+                publishMediaTreeUpdate();
+            } catch (err) {
+                const message =
+                    err instanceof Error
+                        ? err.message
+                        : ErrorMessages.toggleImportant;
+                console.error(message);
+                setToggleError(message);
+            }
+        },
+        [refresh],
+    );
 
     if (!resolvedDirectory) {
         return null;
     }
 
-    const collapseId = `collapse-${sanitizeId(
-        resolvedDirectory.relativePath || resolvedDirectory.name,
-    )}`;
+    const directoryPath =
+        resolvedDirectory.relativePath || resolvedDirectory.name;
+    const collapseId = `collapse-${sanitizeId(directoryPath)}`;
+    const expanded = isDirectoryExpanded(directoryPath);
+    const handleToggleDirectory = useCallback(() => {
+        toggleDirectory(directoryPath);
+    }, [directoryPath, toggleDirectory]);
 
     return (
         <ul className="list-group list-group-flush">
@@ -61,16 +71,18 @@ const handleToggleImportant = useCallback(
                 <button
                     className="btn btn-primary"
                     type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target={"#" + collapseId}
-                    aria-expanded="false"
+                    onClick={handleToggleDirectory}
+                    aria-expanded={expanded}
                     aria-controls={collapseId}
                 >
                     <i className="fa-solid fa-folder"></i>
                     {resolvedDirectory.name}
                     <i className="fa-solid fa-arrow-turn-down"></i>
                 </button>
-                <div className="collapse" id={collapseId}>
+                <div
+                    className={`collapse${expanded ? " show" : ""}`}
+                    id={collapseId}
+                >
                     <ul className="list-group list-group-flush">
                         {(resolvedDirectory.children || []).map((element) => {
                             if (isDirectory(element)) {

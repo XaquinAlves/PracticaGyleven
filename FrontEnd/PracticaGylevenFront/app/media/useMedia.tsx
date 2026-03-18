@@ -23,11 +23,18 @@ interface MediaContextValue {
     loading: boolean;
     error: string;
     refresh: () => Promise<void>;
+    toggleDirectory: (relativePath: string) => void;
+    isDirectoryExpanded: (relativePath: string) => boolean;
+}
+
+function normalizeRelativePath(relativePath?: string) {
+    return relativePath ?? "";
 }
 
 const MediaContext = createContext<MediaContextValue | undefined>(undefined);
 
 export function MediaProvider({ children }: { children: ReactNode }) {
+    const [expandedDirectories, setExpandedDirectories] = useState<string[]>([]);
     const [directories, setDirectories] = useState<DirectoryProps>();
     const [importantFiles, setImportantFiles] = useState<ImportantFile[]>([]);
     const [loading, setLoading] = useState(true);
@@ -89,6 +96,25 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         return unsubscribe;
     }, [loading, loadMedia]);
 
+    const toggleDirectory = useCallback((relativePath: string) => {
+        setExpandedDirectories((previous) => {
+            const normalized = normalizeRelativePath(relativePath);
+            const alreadyExpanded = previous.includes(normalized);
+            if (alreadyExpanded) {
+                return previous.filter((path) => path !== normalized);
+            }
+            return [...previous, normalized];
+        });
+    }, []);
+
+    const isDirectoryExpanded = useCallback(
+        (relativePath: string) =>
+            expandedDirectories.includes(
+                normalizeRelativePath(relativePath),
+            ),
+        [expandedDirectories],
+    );
+
     const value = useMemo(
         () => ({
             directories,
@@ -96,8 +122,18 @@ export function MediaProvider({ children }: { children: ReactNode }) {
             loading,
             error,
             refresh: loadMedia,
+            toggleDirectory,
+            isDirectoryExpanded,
         }),
-        [directories, importantFiles, loading, error, loadMedia],
+        [
+            directories,
+            importantFiles,
+            loading,
+            error,
+            loadMedia,
+            toggleDirectory,
+            isDirectoryExpanded,
+        ],
     );
 
     return (
