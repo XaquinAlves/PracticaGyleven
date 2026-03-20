@@ -56,20 +56,6 @@ def get_csrf(request):
     response['X-CSRFToken'] = get_token(request)
     return response
 
-@ensure_csrf_cookie
-def session_view(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({'isAuthenticated': False})
-
-    return JsonResponse({'isAuthenticated': True})
-
-
-def whoami_view(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({'isAuthenticated': False})
-
-    return JsonResponse({'username': request.user.username})
-
 
 def send_totp_token_view(request):
     try:

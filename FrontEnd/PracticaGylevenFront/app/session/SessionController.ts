@@ -76,7 +76,6 @@ export async function whoami() {
         console.error(err);
         return "";
     }
-    // https://docs.allauth.org/_allauth/{client}/v1/auth/session
 }
 
 export async function get_username() {
@@ -98,7 +97,6 @@ export async function get_username() {
         console.error(err);
         return "";
     }
-    // https://docs.allauth.org/_allauth/{client}/v1/auth/session
 }
 
 export async function changePass(
@@ -141,7 +139,6 @@ export async function changePass(
             throw err;
         }
     }
-    // https://docs.allauth.org/_allauth/{client}/v1/account/password/change
 }
 
 export async function resetPass(
