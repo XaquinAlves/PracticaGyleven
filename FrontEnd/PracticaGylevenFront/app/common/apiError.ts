@@ -33,14 +33,8 @@ function flattenApiMessage(value: unknown): string | undefined {
 function formatApiObject(value: Record<string, unknown>) {
     const message =
         typeof value.message === "string" ? value.message : undefined;
-    const param =
-        typeof value.param === "string"
-            ? value.param
-            : typeof value.param === "object" && value.param
-            ? String(value.param)
-            : undefined;
     if (message) {
-        return param ? `${message} (campo: ${param})` : message;
+        return message
     }
     return undefined;
 }

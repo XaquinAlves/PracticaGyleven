@@ -17,6 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+from . import headless_login_override  # Ensure the login override runs before allauth registers its URLs
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),

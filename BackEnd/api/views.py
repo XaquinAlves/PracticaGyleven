@@ -56,47 +56,6 @@ def get_csrf(request):
     response['X-CSRFToken'] = get_token(request)
     return response
 
-
-@require_POST
-def login_view(request):
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return _json_error('JSON inválido', code=ERROR_INVALID_JSON)
-
-    username = data.get('username')
-    password = data.get('password')
-
-    if username is None or password is None:
-        return _json_error(
-            'Por favor introduzca usuario y contraseña.',
-            code=ERROR_CREDENTIALS_REQUIRED,
-        )
-
-    user = authenticate(username=username, password=password)
-
-    if user is None:
-        return _json_error(
-            'Credenciales inválidas.',
-            code=ERROR_INVALID_CREDENTIALS,
-        )
-
-    login(request, user)
-    return JsonResponse({'detail': 'Sesión iniciada con éxito.'})
-
-
-def logout_view(request):
-    if not request.user.is_authenticated:
-        return _json_error(
-            'No has iniciado sesión.',
-            status=401,
-            code=ERROR_AUTH_REQUIRED,
-        )
-
-    logout(request)
-    return JsonResponse({'detail': 'Sesión cerrada con éxito.'})
-
-
 @ensure_csrf_cookie
 def session_view(request):
     if not request.user.is_authenticated:
@@ -110,44 +69,6 @@ def whoami_view(request):
         return JsonResponse({'isAuthenticated': False})
 
     return JsonResponse({'username': request.user.username})
-
-
-def change_password_view(request):
-    if not request.user.is_authenticated:
-        return _json_error(
-            'No has iniciado sesión.',
-            status=401,
-            code=ERROR_AUTH_REQUIRED,
-        )
-
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return _json_error('JSON inválido', code=ERROR_INVALID_JSON)
-
-    new_password = data.get('password')
-
-    if not new_password:
-        return _json_error(
-            'Por favor introduce una nueva contraseña.',
-            code=ERROR_PASSWORD_REQUIRED,
-        )
-
-    request.user.set_password(new_password)
-    request.user.save()
-    return JsonResponse({'detail': 'Contraseña cambiada con éxito.'})
-
-
-def send_recovery_email_view(request):
-    if not request.user.is_authenticated:
-        return _json_error(
-            'No has iniciado sesión.',
-            status=401,
-            code=ERROR_AUTH_REQUIRED,
-        )
-
-    # En una aplicaci�n real se enviar�a un correo con un enlace de recuperaci�n.
-    return JsonResponse({'detail': 'Se enviará un email de recuperación pronto.'})
 
 
 def send_totp_token_view(request):
@@ -168,7 +89,7 @@ def send_totp_token_view(request):
     user = authenticate(username=username, password=password)
     if user is None:
         return _json_error(
-            'Credenciales inv�lidas.',
+            'Credenciales inválidas.',
             code=ERROR_INVALID_CREDENTIALS,
         )
 
@@ -186,7 +107,7 @@ def send_totp_token_view(request):
         totp = pyotp.TOTP(secret, interval=60)
         send_mail(
             'Clave de un solo uso',
-            'Aqu� tienes tu clave: ' + totp.now(),
+            'Aquí tienes tu clave: ' + totp.now(),
             'xaquinalves@gmail.com',
             [user.email],
             fail_silently=False,

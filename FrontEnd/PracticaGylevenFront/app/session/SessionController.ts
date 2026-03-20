@@ -187,7 +187,6 @@ export async function resetPass(
         throw err;
     }
 }
-// https://docs.allauth.org/_allauth/{client}/v1/auth/password/reset
 
 export async function login(
     event: React.FormEvent<HTMLFormElement>,
@@ -252,7 +251,6 @@ export async function login2fa(
     event: React.FormEvent<HTMLFormElement>,
     code: string,
 ) {
-    //https://docs.allauth.org/_allauth/{client}/v1/auth/2fa/authenticate
     event.preventDefault();
     await ApiHelper.ensureCSRF();
     const response = await fetch(
@@ -292,7 +290,6 @@ export async function logout() {
     if (!response.ok) {
         await throwSessionApiError(response, ErrorMessages.logoutError);
     }
-    // https://docs.allauth.org/_allauth/{client}/v1/auth/session
 }
 
 export async function sendRecoveryEmail(email: string) {
@@ -311,12 +308,9 @@ export async function sendRecoveryEmail(email: string) {
     if (!response.ok) {
         await throwSessionApiError(response, ErrorMessages.recoveryError);
     }
-    // https://docs.allauth.org/_allauth/browser/v1/auth/password/request
 }
 export async function loginGoogle() {
     await ApiHelper.ensureCSRF();
-    //https://docs.allauth.org/_allauth/{client}/v1/auth/provider/token
-    //https://docs.allauth.org/_allauth/browser/v1/auth/provider/redirect
     const form = document.createElement("form");
     form.method = "POST";
     form.action = `${ApiHelper.API_URL}/_allauth/browser/v1/auth/provider/redirect`;
