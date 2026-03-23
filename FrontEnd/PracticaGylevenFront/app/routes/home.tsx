@@ -49,9 +49,4 @@ export async function getSession() {
         alert(ErrorMessages.sessionCheckFailed);
         return false;
     }
-    // https://docs.allauth.org/_allauth/{client}/v1/auth/session
-}
-
-export async function componentDidMount() {
-    await getSession();
 }

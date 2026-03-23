@@ -1,10 +1,7 @@
 ﻿import type React from "react";
 import { useState } from "react";
 import ErrorAlert from "~/common/ErrorAlert";
-import {
-    changePass,
-    ensurePasswordStrength,
-} from "~/session/SessionController";
+import { changePass } from "~/session/SessionController";
 
 export default function ChangePass() {
     const [oldPassword, setOldPassword] = useState("");
@@ -19,27 +16,10 @@ export default function ChangePass() {
     const handleSubmit = async (evn: React.FormEvent<HTMLFormElement>) => {
         evn.preventDefault();
         setStatus(null);
-        if (newPassword !== repeatPassword) {
-            setStatus({
-                type: "error",
-                message: "Las contraseñas no coinciden.",
-            });
-            return;
-        }
-
-        try {
-            ensurePasswordStrength(newPassword);
-        } catch (err) {
-            setStatus({
-                type: "error",
-                message: err instanceof Error ? err.message : "Contraseña inválida.",
-            });
-            return;
-        }
 
         setIsSubmitting(true);
         try {
-            await changePass(evn, oldPassword, newPassword, repeatPassword);
+            await changePass(oldPassword, newPassword, repeatPassword);
             setStatus({
                 type: "success",
                 message: "Contraseña actualizada correctamente.",

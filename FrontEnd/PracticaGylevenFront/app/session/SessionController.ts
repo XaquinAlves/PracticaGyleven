@@ -5,14 +5,6 @@ import ApiHelper from "~/common/ApiHelper";
 import { ErrorMessages } from "~/common/messageCatalog";
 import { type ApiErrorPayload, parseApiError } from "~/common/apiError";
 
-export const PASSWORD_RULES = [
-    "mínimo 8 caracteres",
-    "una letra mayúscula",
-    "una letra minúscula",
-    "un número",
-    "un símbolo especial",
-];
-
 export function ensurePasswordStrength(password: string) {
     const strengthMessage = ErrorMessages.passwordStrength;
     if (password.length < 8) {
@@ -54,30 +46,6 @@ async function throwSessionApiError(response: Response, fallback: string) {
     throw new Error(mapSessionApiError(payload, fallback));
 }
 
-export async function whoami() {
-    try {
-        const response = await fetch(
-            ApiHelper.API_URL + "/_allauth/browser/v1/auth/session",
-            {
-                headers: ApiHelper.getJsonHeaders(false),
-                credentials: "include",
-            },
-        );
-        if (response.ok) {
-            const data = await response.json();
-            const username = data.data.user.username;
-            console.log("Iniciaste sesión como: " + username);
-            return username;
-        } else {
-            console.log("No has iniciado sesión");
-            return "";
-        }
-    } catch (err) {
-        console.error(err);
-        return "";
-    }
-}
-
 export async function get_username() {
     try {
         const response = await fetch(
@@ -100,44 +68,39 @@ export async function get_username() {
 }
 
 export async function changePass(
-    event: React.FormEvent<HTMLFormElement>,
     oldPassword: string,
     newPassword: string,
     repeatPassword: string,
 ) {
-    event.preventDefault();
-
     if (newPassword !== repeatPassword) {
         throw new Error(ErrorMessages.passwordMismatch);
     }
 
     ensurePasswordStrength(newPassword);
-    {
-        try {
-            await ApiHelper.ensureCSRF();
-            const response = await fetch(
-                ApiHelper.API_URL +
-                    "/_allauth/browser/v1/account/password/change",
-                {
-                    method: "POST",
-                    headers: ApiHelper.getJsonHeaders(),
-                    credentials: "include",
-                    body: JSON.stringify({
-                        current_password: oldPassword,
-                        new_password: newPassword,
-                    }),
-                },
+
+    try {
+        await ApiHelper.ensureCSRF();
+        const response = await fetch(
+            ApiHelper.API_URL + "/_allauth/browser/v1/account/password/change",
+            {
+                method: "POST",
+                headers: ApiHelper.getJsonHeaders(),
+                credentials: "include",
+                body: JSON.stringify({
+                    current_password: oldPassword,
+                    new_password: newPassword,
+                }),
+            },
+        );
+        if (!response.ok) {
+            await throwSessionApiError(
+                response,
+                ErrorMessages.passwordChangeError,
             );
-            if (!response.ok) {
-                await throwSessionApiError(
-                    response,
-                    ErrorMessages.passwordChangeError,
-                );
-            }
-        } catch (err) {
-            console.error(err);
-            throw err;
         }
+    } catch (err) {
+        console.error(err);
+        throw err;
     }
 }
 
