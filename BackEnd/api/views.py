@@ -5,12 +5,11 @@ from typing import Any
 
 import environ
 import pyotp
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_POST
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env()

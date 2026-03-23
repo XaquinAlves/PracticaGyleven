@@ -248,49 +248,6 @@ def _is_previewable_mime(mime_type: str | None) -> bool:
 
 
 # Create your views here.
-def get_neos(request):
-    api_key = os.getenv("NASA_API_KEY")
-    if not api_key:
-        return _json_error(
-            "Falta la clave NASA_API_KEY en el servidor",
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
-    try:
-        response = requests.get(
-            "https://api.nasa.gov/neo/rest/v1/neo/browse",
-            params={"api_key": api_key},
-            timeout=5,
-        )
-        response.raise_for_status()
-        data = response.json()
-        neos_raw = data.get("near_earth_objects", [])
-        neos = []
-        for neo_raw in neos_raw:
-            estimated = neo_raw.get("estimated_diameter", {}).get("kilometers", {})
-            neos.append(
-                {
-                    "id": neo_raw.get("id"),
-                    "name": neo_raw.get("name"),
-                    "is_potentially_hazardous_asteroid": neo_raw.get(
-                        "is_potentially_hazardous_asteroid"
-                    ),
-                    "estimated_diameter_km_min": estimated.get(
-                        "estimated_diameter_min"
-                    ),
-                    "estimated_diameter_km_max": estimated.get(
-                        "estimated_diameter_max"
-                    ),
-                }
-            )
-        return JsonResponse({"neos": neos})
-    except requests.RequestException as exc:
-        logger.exception("Failed to fetch NEOS: %s", exc)
-        return _format_error(
-            "No se pudo obtener los asteroides cercanos",
-            status.HTTP_502_BAD_GATEWAY,
-            code="NEO_FETCH_FAILED",
-        )
-
 def get_neos_by_page(request, page):
     api_key = os.getenv("NASA_API_KEY")
     if not api_key:
@@ -624,9 +581,6 @@ def media_tree_version(request):
             code="MEDIA_VERSION_FAILED",
         )
 
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
 def _parse_block_size(
     raw_block: str | None,
     default_block: int,
@@ -648,7 +602,8 @@ def _parse_block_size(
         )
     return block_size, None
 
-
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def download_media_file(request):
     #Obtiene el parametro de la ruta del archivo a descargar, y comprueba que es válido
     relative_path = request.query_params.get("path")
@@ -663,7 +618,7 @@ def download_media_file(request):
     except ValueError as exc:
         return _format_error(
             str(exc),
-            status=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_400_BAD_REQUEST,
             code="INVALID_PATH",
         )
 
@@ -697,7 +652,7 @@ def download_media_file(request):
         as_attachment=as_attachment,
         filename=file_path.name,
     )
-    response.block_size = block_size
+    response.block_size = int(block_size)
     if mime_type:
         response["Content-Type"] = mime_type
     if not as_attachment:
@@ -719,7 +674,7 @@ def list_important_files(request):
         logger.exception("Failed to read important files: %s", exc)
         return _format_error(
             "Error al cargar archivos importantes",
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             code="IMPORTANT_FILES_FAILED",
         )
 
@@ -733,7 +688,7 @@ def toggle_important_file(request):
     if not relative_path or not isinstance(relative_path, str):
         return _format_error(
             "Campo 'relative_path' obligatorio",
-            status=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_400_BAD_REQUEST,
             code="RELATIVE_PATH_REQUIRED",
         )
 
@@ -742,14 +697,14 @@ def toggle_important_file(request):
     except ValueError as exc:
         return _format_error(
             str(exc),
-            status=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_400_BAD_REQUEST,
             code="INVALID_RELATIVE_PATH",
         )
 
     if important_flag is None:
         return _format_error(
             "Campo 'important' obligatorio",
-            status=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_400_BAD_REQUEST,
             code="IMPORTANT_FLAG_REQUIRED",
         )
 
@@ -805,6 +760,6 @@ def toggle_important_file(request):
         logger.exception("Failed to toggle important file: %s", exc)
         return _format_error(
             "Error al marcar el archivo importante",
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             code="IMPORTANT_FILE_TOGGLE_FAILED",
         )
