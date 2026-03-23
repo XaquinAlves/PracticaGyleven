@@ -1,7 +1,7 @@
 import type { DirectoryProps } from "./MediaModel";
 import FileComponent from "./FileComponent";
 import { isDirectory, toggleImportantFile } from "./MediaModel";
-import { useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import ErrorAlert from "~/common/ErrorAlert";
 import { ErrorMessages } from "~/common/messageCatalog";
 import { useMedia } from "./useMedia";
@@ -15,7 +15,7 @@ function sanitizeId(value: string) {
     return value.replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
-export default function DirectoryComponent({
+function DirectoryComponentBase({
     directory,
 }: DirectoryComponentProps) {
     const {
@@ -88,7 +88,7 @@ export default function DirectoryComponent({
                             if (isDirectory(element)) {
                                 return (
                                     <li className="list-group-item">
-                                        <DirectoryComponent
+                                        <MemoizedDirectoryComponent
                                             key={
                                                 element.relativePath ||
                                                 element.name
@@ -99,7 +99,7 @@ export default function DirectoryComponent({
                                 );
                             } else {
                                 return (
-                                    <FileComponent
+                                        <FileComponent
                                         key={element.relativePath}
                                         file={element}
                                         important={importantPaths.has(
@@ -129,3 +129,7 @@ export default function DirectoryComponent({
         </ul>
     );
 }
+
+const MemoizedDirectoryComponent = memo(DirectoryComponentBase);
+
+export default MemoizedDirectoryComponent;

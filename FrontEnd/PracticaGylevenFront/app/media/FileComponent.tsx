@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { FileProps } from "./MediaModel";
 import ApiHelper from "~/common/ApiHelper";
 import ErrorAlert from "~/common/ErrorAlert";
@@ -37,7 +37,7 @@ function canDisplayInline(contentType: string | null, fileName: string) {
         : false;
 }
 
-export default function FileComponent({
+function FileComponentBase({
     file,
     important,
     onToggleImportant,
@@ -126,3 +126,7 @@ export default function FileComponent({
         </li>
     );
 }
+
+const FileComponent = memo(FileComponentBase);
+
+export default FileComponent;

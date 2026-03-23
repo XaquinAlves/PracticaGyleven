@@ -1,12 +1,13 @@
+import { memo } from "react";
 import type { InvoiceProps, InvoiceTableProps } from "./InvoicesModel";
 
-export function Invoice({
+export const Invoice = memo(function Invoice({
     name,
     page_count,
     invoice_number,
     invoice_date,
     total,
-    extracted_at
+    extracted_at,
 }: InvoiceProps) {
     return (
         <tr>
@@ -18,9 +19,9 @@ export function Invoice({
             <td>{extracted_at}</td>
         </tr>
     );
-}
+});
 
-export default function InvoicesTable({ invoices }: InvoiceTableProps) {
+function InvoicesTableBase({ invoices }: InvoiceTableProps) {
     return (
         <table className="table table-striped table-bordered">
             <thead>
@@ -34,17 +35,27 @@ export default function InvoicesTable({ invoices }: InvoiceTableProps) {
                 </tr>
             </thead>
             <tbody>
-                {invoices.map((invoice) => (
-                    <Invoice
-                        name={invoice.name}
-                        page_count={invoice.page_count}
-                        invoice_number={invoice.invoice_number}
-                        invoice_date={invoice.invoice_date}
-                        total={invoice.total}
-                        extracted_at={invoice.extracted_at}
-                    />
-                ))}
+                {invoices.map((invoice, index) => {
+                    const rowKey =
+                        invoice.invoice_number ??
+                        invoice.name ??
+                        invoice.extracted_at ??
+                        `${index}`;
+                    return (
+                        <Invoice
+                            key={rowKey}
+                            name={invoice.name}
+                            page_count={invoice.page_count}
+                            invoice_number={invoice.invoice_number}
+                            invoice_date={invoice.invoice_date}
+                            total={invoice.total}
+                            extracted_at={invoice.extracted_at}
+                        />
+                    );
+                })}
             </tbody>
         </table>
     );
 }
+
+export default memo(InvoicesTableBase);
