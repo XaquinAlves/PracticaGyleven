@@ -31,10 +31,9 @@ export default function Inicio() {
             <div className="col-8 col-lg-10">
                 <div className="row justify-content-center">
                     <div className="card mt-5 ms-5 w-auto">
-                        <h5 className="card-header">Iniciar Sesión</h5>
+                        <h5 className="card-header">Bienvenido {username}</h5>
                         <div className="card-body">
                             {error && <ErrorAlert message={error} />}
-                            <p>Bienvenido {username}</p>
                             <button
                                 className="btn btn-danger"
                                 onClick={handleLogout}
