@@ -34,7 +34,9 @@ function normalizeRelativePath(relativePath?: string) {
 const MediaContext = createContext<MediaContextValue | undefined>(undefined);
 
 export function MediaProvider({ children }: { children: ReactNode }) {
-    const [expandedDirectories, setExpandedDirectories] = useState<string[]>([]);
+    const [expandedDirectories, setExpandedDirectories] = useState<string[]>(
+        [],
+    );
     const [directories, setDirectories] = useState<DirectoryProps>();
     const [importantFiles, setImportantFiles] = useState<ImportantFile[]>([]);
     const [loading, setLoading] = useState(true);
@@ -58,7 +60,9 @@ export function MediaProvider({ children }: { children: ReactNode }) {
             const version = await fetchMediaTreeVersion();
             setTreeVersion(version);
         } catch (err) {
-            setError(err instanceof Error ? err.message : ErrorMessages.mediaError);
+            setError(
+                err instanceof Error ? err.message : ErrorMessages.mediaError,
+            );
             throw err;
         } finally {
             setLoading(false);
@@ -96,6 +100,47 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         return unsubscribe;
     }, [loading, loadMedia]);
 
+    // Validación de media por WebSocket
+    useEffect(() => {
+        let socket: WebSocket | null = null;
+        let reconnectTimer: number | undefined;
+
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const connect = () => {
+            socket = new WebSocket(
+                `${protocol}://${window.location.host}/ws/media-updates/`,
+            );
+
+            socket.addEventListener("message", (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data?.action === "refresh") {
+                        void loadMedia();
+                    }
+                } catch (err) {
+                    console.error("Invalid media update payload", err);
+                }
+            });
+
+            socket.addEventListener("close", () => {
+                reconnectTimer = window.setTimeout(connect, 1000);
+            });
+
+            socket.addEventListener("error", () => {
+                socket?.close();
+            });
+        };
+
+        connect();
+
+        return () => {
+            if (reconnectTimer) {
+                window.clearTimeout(reconnectTimer);
+            }
+            socket?.close();
+        };
+    }, [loadMedia]);
+
     const toggleDirectory = useCallback((relativePath: string) => {
         setExpandedDirectories((previous) => {
             const normalized = normalizeRelativePath(relativePath);
@@ -109,9 +154,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
 
     const isDirectoryExpanded = useCallback(
         (relativePath: string) =>
-            expandedDirectories.includes(
-                normalizeRelativePath(relativePath),
-            ),
+            expandedDirectories.includes(normalizeRelativePath(relativePath)),
         [expandedDirectories],
     );
 

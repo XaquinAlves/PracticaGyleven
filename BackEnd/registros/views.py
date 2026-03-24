@@ -18,6 +18,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from PyPDF2 import PdfReader
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 logger = logging.getLogger(__name__)
 
@@ -364,6 +366,20 @@ def list_facturas(request):
         )
 
 
+channel_layer = get_channel_layer()
+
+def publish_media_update(payload):
+    if not channel_layer:
+        logger.warning("No se pudo notificar media-tree: channel layer no disponible")
+        return
+    async_to_sync(channel_layer.group_send)(
+        "media-tree",
+        {
+            "type": "media.update",
+            "data": payload,
+        },
+    )
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def upload_to_media(request):
@@ -473,6 +489,13 @@ def upload_to_media(request):
             len(saved_items),
             target_dir or "media root",
         )
+        payload = {
+            "action": "refresh",
+            "uploaded": len(saved_items),
+            "target_dir": target_dir or "",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        publish_media_update(payload)
         return Response(saved_items, status=status.HTTP_201_CREATED)
     except Exception as exc:
         logger.exception("Failed to upload media files: %s", exc)

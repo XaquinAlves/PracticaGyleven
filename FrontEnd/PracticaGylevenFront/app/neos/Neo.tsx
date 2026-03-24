@@ -1,12 +1,13 @@
+import { memo } from "react";
 import { type NeoItem, type NeosTableProps } from "./NeosModel";
 
-export function Neo({
+const Neo = memo(function Neo({
     id,
     name,
     estimated_diameter_km_min,
     estimated_diameter_km_max,
     is_potentially_hazardous,
-}: NeoItem): import("react/jsx-runtime").JSX.Element {
+}: NeoItem) {
     return (
         <tr>
             <td>{id}</td>
@@ -17,9 +18,9 @@ export function Neo({
             <td>{is_potentially_hazardous ? "Sí" : "No"}</td>
         </tr>
     );
-}
+});
 
-export default function NeosTable({
+function NeosTableBase({
     neos,
     onSave,
     saving,
@@ -37,10 +38,7 @@ export default function NeosTable({
                 </thead>
                 <tbody>
                     {neos.map((neo) => (
-                        <Neo
-                            key={neo.id}
-                            {...neo}
-                        />
+                        <Neo key={neo.id} {...neo} />
                     ))}
                 </tbody>
             </table>
@@ -55,3 +53,5 @@ export default function NeosTable({
         </>
     );
 }
+
+export default memo(NeosTableBase);

@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
     'allauth.mfa',
     'allauth.headless',
+    "channels",
 ]
 
 MIDDLEWARE = [
@@ -248,3 +249,15 @@ MFA_TOTP_TOLERANCE = 1;
 #Para la descarga de archivos, define el tamaño de bloque de descarga por deffecto
 MEDIA_DOWNLOAD_BLOCK_SIZE = 64 * 1024
 MEDIA_DOWNLOAD_BLOCK_SIZE_MAX = 512 * 1024
+
+#Redis + ASGI
+ASGI_APPLICATION = "PracticaGyleven.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("redis://localhost:6379/0")],
+        },
+    },
+}
