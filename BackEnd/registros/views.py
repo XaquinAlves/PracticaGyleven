@@ -366,12 +366,17 @@ def list_facturas(request):
         )
 
 
-channel_layer = get_channel_layer()
-
 def publish_media_update(payload):
+    channel_layer = get_channel_layer()
     if not channel_layer:
         logger.warning("No se pudo notificar media-tree: channel layer no disponible")
         return
+    logger.info(
+        "Publishing via channel layer %s (%s) payload=%s",
+        channel_layer.__class__.__name__,
+        id(channel_layer),
+        payload,
+    )
     async_to_sync(channel_layer.group_send)(
         "media-tree",
         {
@@ -562,7 +567,13 @@ def leer_factura_pdf(request):
         if successful_invoices:
             invoice_df = pd.DataFrame(successful_invoices)
             _persist_invoices(invoice_df)
-
+        payload = {
+            "action": "refresh",
+            "uploaded": len(invoice_rows),
+            "target_dir": "/Facturas/",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        publish_media_update(payload)
         return Response(invoice_rows)
     except Exception as exc:
         logger.exception("Failed to process invoices: %s", exc)
@@ -614,15 +625,12 @@ def _parse_block_size(
     try:
         block_size = int(raw_block)
     except ValueError:
-        return 0, _json_error(
-            "block_size debe ser un entero válido",
-            status.HTTP_400_BAD_REQUEST,
-        )
-    if block_size < 1 or block_size > max_block_size:
-        return 0, _json_error(
-            f"block_size debe estar entre 1 y {max_block_size}",
-            status.HTTP_400_BAD_REQUEST,
-        )
+        logger.debug("Invalid block_size %s, using default %d", raw_block, default_block)
+        return default_block, None
+    if block_size < 1:
+        return default_block, None
+    if block_size > max_block_size:
+        return max_block_size, None
     return block_size, None
 
 @api_view(["GET"])
@@ -769,7 +777,13 @@ def toggle_important_file(request):
                 ]
             )
             df = pd.concat([df, new_row], ignore_index=True)
-
+        payload = {
+            "action": "refresh",
+            "uploaded": (df),
+            "target_dir": sanitized_path or "",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        publish_media_update(payload)
         _persist_important_records(df)
         return Response(
             {
