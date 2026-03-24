@@ -779,8 +779,8 @@ def toggle_important_file(request):
             df = pd.concat([df, new_row], ignore_index=True)
         payload = {
             "action": "refresh",
-            "uploaded": (df),
-            "target_dir": sanitized_path or "",
+            "updated_path": sanitized_path,
+            "is_important": important_bool,
             "timestamp": datetime.utcnow().isoformat(),
         }
         publish_media_update(payload)

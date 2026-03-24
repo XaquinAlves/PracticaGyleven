@@ -5,6 +5,7 @@ import {
     useContext,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from "react";
 import {
@@ -42,6 +43,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [treeVersion, setTreeVersion] = useState("");
+    const [useVersionPoll, setUseVersionPoll] = useState(true);
     //Carga el listado de directorios y ficheros del servidor
     const loadMedia = useCallback(async () => {
         setLoading(true);
@@ -59,9 +61,12 @@ export function MediaProvider({ children }: { children: ReactNode }) {
             //Carga los archivos marcados como importantes
             const important = await fetchImportantFiles();
             setImportantFiles(important);
-            //Carga un hash para comprobar si hubo cambios en el arbol
-            const version = await fetchMediaTreeVersion();
-            setTreeVersion(version);
+            if (useVersionPoll) {
+                const version = await fetchMediaTreeVersion();
+                setTreeVersion(version);
+            } else {
+                setTreeVersion("");
+            }
         } catch (err) {
             setError(
                 err instanceof Error ? err.message : ErrorMessages.mediaError,
@@ -70,20 +75,21 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [useVersionPoll]);
 
     useEffect(() => {
         void loadMedia();
     }, [loadMedia]);
     //Compara versiones periódicamente con el hash, 15000ms de intervalo
     useEffect(() => {
+        if (!useVersionPoll) {
+            return;
+        }
         const intervalId = setInterval(async () => {
-            //Si aún no hay datos cargados no continúa
             if (loading) {
                 return;
             }
             try {
-                //Comprueba las versiones y llama a loadMedia() si no coinciden
                 const version = await fetchMediaTreeVersion();
                 if (version && version !== treeVersion) {
                     void loadMedia();
@@ -93,7 +99,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
             }
         }, 15000);
         return () => clearInterval(intervalId);
-    }, [loading, loadMedia, treeVersion]);
+    }, [loading, loadMedia, treeVersion, useVersionPoll]);
 
     useEffect(() => {
         const unsubscribe = subscribeMediaTreeUpdates(() => {
@@ -106,6 +112,12 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     }, [loading, loadMedia]);
 
     // Validación de media por WebSocket
+    const loadMediaRef = useRef(loadMedia);
+
+    useEffect(() => {
+        loadMediaRef.current = loadMedia;
+    }, [loadMedia]);
+
     useEffect(() => {
         let socket: WebSocket | null = null;
         let reconnectTimer: number | undefined;
@@ -113,25 +125,32 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         const protocol = window.location.protocol === "https:" ? "wss" : "ws";
         const connect = () => {
             socket = new WebSocket(
-                `${protocol}://${window.location.host}/ws/media-updates/`,
+                `${protocol}://localhost:8000/ws/media-updates/`,
             );
+
+            socket.addEventListener("open", () => {
+                setUseVersionPoll(false);
+            });
 
             socket.addEventListener("message", (event) => {
                 try {
                     const data = JSON.parse(event.data);
                     if (data?.action === "refresh") {
-                        void loadMedia();
+                        void loadMediaRef.current?.();
                     }
                 } catch (err) {
                     console.error("Invalid media update payload", err);
                 }
             });
 
-            socket.addEventListener("close", () => {
+            socket.addEventListener("close", (event) => {
+                console.error("media ws closed", event);
+                setUseVersionPoll(true);
                 reconnectTimer = window.setTimeout(connect, 1000);
             });
 
             socket.addEventListener("error", () => {
+                setUseVersionPoll(true);
                 socket?.close();
             });
         };
@@ -144,7 +163,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
             }
             socket?.close();
         };
-    }, [loadMedia]);
+    }, []);
 
     //Para abrir/cerrar una carpeta
     const toggleDirectory = useCallback((relativePath: string) => {
