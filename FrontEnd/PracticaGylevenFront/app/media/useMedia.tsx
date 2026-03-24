@@ -17,6 +17,7 @@ import {
 } from "./MediaModel";
 import { subscribeMediaTreeUpdates } from "./mediaUpdates";
 import { ErrorMessages } from "~/common/messageCatalog";
+import { useSocket } from "~/common/useSocket";
 
 interface MediaContextValue {
     directories?: DirectoryProps;
@@ -44,6 +45,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     const [error, setError] = useState("");
     const [treeVersion, setTreeVersion] = useState("");
     const [useVersionPoll, setUseVersionPoll] = useState(true);
+
     //Carga el listado de directorios y ficheros del servidor
     const loadMedia = useCallback(async () => {
         setLoading(true);
@@ -101,17 +103,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         return () => clearInterval(intervalId);
     }, [loading, loadMedia, treeVersion, useVersionPoll]);
 
-    useEffect(() => {
-        const unsubscribe = subscribeMediaTreeUpdates(() => {
-            if (loading) {
-                return;
-            }
-            void loadMedia();
-        });
-        return unsubscribe;
-    }, [loading, loadMedia]);
-
-    // Validación de media por WebSocket
+    const { ready, subscribe } = useSocket("/ws/media-updates/");
     const loadMediaRef = useRef(loadMedia);
 
     useEffect(() => {
@@ -119,51 +111,34 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     }, [loadMedia]);
 
     useEffect(() => {
-        let socket: WebSocket | null = null;
-        let reconnectTimer: number | undefined;
-
-        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-        const connect = () => {
-            socket = new WebSocket(
-                `${protocol}://localhost:8000/ws/media-updates/`,
-            );
-
-            socket.addEventListener("open", () => {
-                setUseVersionPoll(false);
-            });
-
-            socket.addEventListener("message", (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data?.action === "refresh") {
-                        void loadMediaRef.current?.();
-                    }
-                } catch (err) {
-                    console.error("Invalid media update payload", err);
-                }
-            });
-
-            socket.addEventListener("close", (event) => {
-                console.error("media ws closed", event);
-                setUseVersionPoll(true);
-                reconnectTimer = window.setTimeout(connect, 1000);
-            });
-
-            socket.addEventListener("error", () => {
-                setUseVersionPoll(true);
-                socket?.close();
-            });
-        };
-
-        connect();
-
-        return () => {
-            if (reconnectTimer) {
-                window.clearTimeout(reconnectTimer);
+        const unsubscribe = subscribe((data) => {
+            if (loading) {
+                return;
             }
-            socket?.close();
-        };
-    }, []);
+            if (typeof data === "object" && data !== null) {
+                const typed = data as { action?: string };
+                if (typed.action === "refresh") {
+                    void loadMediaRef.current?.();
+                }
+            }
+        });
+        return unsubscribe;
+    }, [loading, subscribe]);
+
+    useEffect(() => {
+        setUseVersionPoll(!ready);
+    }, [ready]);
+
+    useEffect(() => {
+        if (ready) {
+            return () => undefined;
+        }
+        const unsubscribe = subscribeMediaTreeUpdates(() => {
+            if (loading) return;
+            void loadMedia();
+        });
+        return unsubscribe;
+    }, [loadMedia, loading, ready]);
 
     //Para abrir/cerrar una carpeta
     const toggleDirectory = useCallback((relativePath: string) => {

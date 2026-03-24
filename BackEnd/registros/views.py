@@ -3,9 +3,8 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict, cast
 from mimetypes import guess_type
-
 from django.conf import settings
 from django.http import FileResponse, JsonResponse
 import pandas as pd
@@ -20,10 +19,23 @@ from rest_framework.permissions import IsAuthenticated
 from PyPDF2 import PdfReader
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from datetime import timedelta
+from django.utils import timezone
 
+# Constantes y variables
+_NEOS_CACHE_KEY = "neos_page_0"
+_NEOS_CACHE_TTL = timedelta(minutes=15)  # ajusta el tiempo que quieras
+_neos_cache: dict[str, dict[str, Any]] = {}
+_MIN_NEOS_PAGE = 0
 logger = logging.getLogger(__name__)
+class NeosResponse(TypedDict):
+    neos: list[dict[str, Any]]
 
+def compute_hash(payload: NeosResponse) -> str:
+    serialized = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
+# Normaliza un decimal
 def _normalize_decimal(raw_value: str | None) -> str | None:
     if not raw_value:
         return None
@@ -41,7 +53,7 @@ def _normalize_decimal(raw_value: str | None) -> str | None:
     cleaned = re.sub(r"[^\d\.]", "", value)
     return cleaned if cleaned else None
 
-
+#Extrae los metadatos de una factura
 def _extract_invoice_metadata(text: str) -> dict[str, str | None]:
     invoice_number = None
     invoice_date = None
@@ -73,7 +85,7 @@ def _extract_invoice_metadata(text: str) -> dict[str, str | None]:
         "total": total,
     }
 
-
+# Guarda una factura en media/invoices_by_pdf.csv
 def _persist_invoices(df: pd.DataFrame):
     os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
     invoices_path = os.path.join(settings.MEDIA_ROOT, "invoices_by_pdf.csv")
@@ -92,7 +104,7 @@ def _persist_invoices(df: pd.DataFrame):
     combined.to_csv(invoices_path, index=False)
     logger.info("Invoices table persisted at %s (%d rows)", invoices_path, len(combined))
 
-
+# Sube el pdf de la factura a Media/Facturas/{archivo.pdf}
 def _save_pdf_to_facturas(uploaded_file, destination_root: str) -> str:
     os.makedirs(destination_root, exist_ok=True)
     name_root, ext = os.path.splitext(uploaded_file.name)
@@ -109,6 +121,7 @@ def _save_pdf_to_facturas(uploaded_file, destination_root: str) -> str:
             out_file.write(chunk)
     return target_path
 
+# Devuelve un mapeado de una ruta con carpetas y archivos
 def _build_media_tree(base_path: Path) -> list[dict[str, Any]]:
     entries = []
     for entry in sorted(base_path.iterdir(), key=lambda p: p.name):
@@ -156,7 +169,7 @@ def _compute_media_tree_version() -> str:
     return digest
 
 
-
+# Formatea una respuesta de error
 def _format_error(
     detail: str,
     status_code: int = status.HTTP_400_BAD_REQUEST,
@@ -248,9 +261,47 @@ def _is_previewable_mime(mime_type: str | None) -> bool:
         mime_type in previewable_exact
     )
 
+def _get_cached_neos() -> tuple[NeosResponse, str] | None:
+    entry = _neos_cache.get(_NEOS_CACHE_KEY)
+    if not entry:
+        return None
+    if entry["expires_at"] <= timezone.now():
+        _neos_cache.pop(_NEOS_CACHE_KEY, None)
+        return None
+    return cast(tuple[NeosResponse, str], (entry["response"], entry["hash"]))
 
-# Create your views here.
-def get_neos_by_page(request, page):
+
+def _set_cached_neos(response: NeosResponse, response_hash: str) -> None:
+    _neos_cache[_NEOS_CACHE_KEY] = {
+        "response": response,
+        "hash": response_hash,
+        "expires_at": timezone.now() + _NEOS_CACHE_TTL,
+    }
+
+
+def _invalidate_neos_cache() -> None:
+    _neos_cache.pop(_NEOS_CACHE_KEY, None)
+# Public Views
+
+
+def publish_neos_update():
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        return
+    payload = {
+        "action": "refresh",
+        "resource": "neos",
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+    async_to_sync(channel_layer.group_send)(
+        "media-tree",
+        {
+            "type": "media.update",
+            "data": payload,
+        },
+    )
+
+def fetch_from_external_api(page: int) -> NeosResponse | Response:
     api_key = os.getenv("NASA_API_KEY")
     if not api_key:
         return _json_error(
@@ -291,7 +342,7 @@ def get_neos_by_page(request, page):
                     ),
                 }
             )
-        return JsonResponse({"neos": neos})
+        return {"neos": neos}
     except requests.RequestException as exc:
         logger.exception("Failed to fetch NEOS page %s: %s", page_number, exc)
         return _format_error(
@@ -299,6 +350,29 @@ def get_neos_by_page(request, page):
             status.HTTP_502_BAD_GATEWAY,
             code="NEO_FETCH_PAGE_FAILED",
         )
+
+def get_neos_by_page(request, page: int):
+    if page == _MIN_NEOS_PAGE:
+        cached_entry = _get_cached_neos()
+        if cached_entry:
+            cached_response, cached_hash = cached_entry
+            return JsonResponse(
+                {
+                    "neos": cached_response["neos"],
+                    "tree_hash": cached_hash,
+                    "cached": True,
+                }
+            )
+
+    response = fetch_from_external_api(page)
+    if isinstance(response, Response):
+        return response
+
+    if page == _MIN_NEOS_PAGE:
+        response_hash = compute_hash(response)
+        _set_cached_neos(response, response_hash)
+
+    return JsonResponse({"neos": response["neos"], "cached": False})
 
 def save_neos(request):
     try:
