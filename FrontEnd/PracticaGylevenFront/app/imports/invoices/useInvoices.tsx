@@ -10,6 +10,7 @@ import {
 } from "react";
 import { type InvoiceProps, fetchInvoices } from "./InvoicesModel";
 import { ErrorMessages } from "~/common/messageCatalog";
+import ApiHelper from "~/common/ApiHelper";
 import { useSocket } from "~/common/useSocket";
 import { subscribeMediaTreeUpdates } from "~/media/mediaUpdates";// reuse broadcast fallback
 
@@ -34,7 +35,8 @@ export function InvoicesProvider({
     const [error, setError] = useState("");
     const [invoicesHash, setInvoicesHash] = useState("");
     const cacheRef = useRef<InvoiceProps[] | null>(null);
-    const { ready, subscribe } = useSocket("/ws/media-updates/");
+    const invoicesHost = new URL(ApiHelper.API_URL).host;
+    const { ready, subscribe } = useSocket("/ws/media-updates/", invoicesHost);
     const invoicesHashRef = useRef(invoicesHash);
 
     const loadInvoices = useCallback(

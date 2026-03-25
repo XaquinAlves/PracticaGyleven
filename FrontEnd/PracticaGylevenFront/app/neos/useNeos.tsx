@@ -9,6 +9,7 @@ import {
     useState,
 } from "react";
 import { type NeosResponse, fetchNeos, saveNeos } from "./NeosModel";
+import ApiHelper from "~/common/ApiHelper";
 import { useSocket } from "~/common/useSocket";
 
 const NEOS_UPDATE_CHANNEL = "neos-updates";
@@ -153,7 +154,8 @@ export function NeosProvider({
     const loadNeosRef = useRef(loadNeos);
     const [neosHash, setNeosHash] = useState("");
     const neosHashRef = useRef(neosHash);
-    const { subscribe: subscribeSocket } = useSocket("/ws/media-updates/");
+    const neosHost = new URL(ApiHelper.API_URL).host;
+    const { subscribe: subscribeSocket } = useSocket("/ws/media-updates/", neosHost);
 
     useEffect(() => {
         loadNeosRef.current = loadNeos;

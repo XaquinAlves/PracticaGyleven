@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import ApiHelper from "~/common/ApiHelper";
 import { useSocket } from "~/common/useSocket";
 import { subscribeMediaTreeUpdates } from "~/media/mediaUpdates";
 
@@ -9,7 +10,8 @@ interface CachedEntry {
 
 export function useFileLoader() {
     const cacheRef = useRef<Map<string, CachedEntry>>(new Map());
-    const { ready, subscribe } = useSocket("/ws/media-updates/");
+    const socketHost = new URL(ApiHelper.API_URL).host;
+    const { ready, subscribe } = useSocket("/ws/media-updates/", socketHost);
 
     const clearCache = useCallback(() => {
         cacheRef.current.forEach(({ abort }) => abort.abort());

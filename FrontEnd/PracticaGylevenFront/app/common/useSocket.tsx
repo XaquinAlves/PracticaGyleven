@@ -13,9 +13,20 @@ function buildWebSocketUrl(path: string, hostOverride?: string) {
     if (!canUseWindow) {
         return "";
     }
-    const host = hostOverride ?? window.location.host;
+    const apiUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+    const fallbackHost =
+        hostOverride ??
+        (apiUrl
+            ? (() => {
+                  try {
+                      return new URL(apiUrl).host;
+                  } catch {
+                      return window.location.host;
+                  }
+              })()
+            : window.location.host);
     const scheme = window.location.protocol === "https:" ? "wss" : "ws";
-    return `${scheme}://${host}${path}`;
+    return `${scheme}://${fallbackHost}${path}`;
 }
 
 export function useSocket(path: string, hostOverride?: string): UseSocketResult {

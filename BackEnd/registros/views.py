@@ -21,17 +21,30 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from datetime import timedelta
 from django.utils import timezone
+import threading
+import time
+from django.conf import settings as django_settings
+import threading
+
 
 logger = logging.getLogger(__name__)
 # Constantes y variables
 _NEOS_CACHE_KEY = "neos_page_0"
-_NEOS_CACHE_TTL = timedelta(minutes=15)  # ajusta el tiempo que quieras
+_NEOS_CACHE_TTL = timedelta(minutes=15)
 _neos_cache: dict[str, dict[str, Any]] = {}
 _MIN_NEOS_PAGE = 0
 _INVOICES_CACHE_TTL = timedelta(minutes=5)
 _invoices_cache: dict[str, Any] = {}
 _MEDIA_STRUCTURE_CACHE_TTL = timedelta(minutes=2)
 _media_structure_cache: dict[str, Any] = {}
+_MEDIA_TREE_WATCHER_INTERVAL = getattr(
+    django_settings, "MEDIA_TREE_WATCHER_INTERVAL", 15
+)
+_MEDIA_TREE_WATCHER_ENABLED = getattr(
+    django_settings, "MEDIA_TREE_WATCHER_ENABLED", True
+)
+_media_tree_watcher_thread: threading.Thread | None = None
+_media_tree_watcher_hash = ""
 class NeosResponse(TypedDict):
     neos: list[dict[str, Any]]
 
@@ -314,6 +327,44 @@ def _invalidate_media_structure_cache() -> None:
     _media_structure_cache.pop("entry", None)
 
 
+def _publish_media_tree_change(new_version: str) -> None:
+    payload = {
+        "action": "refresh",
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+    publish_media_update(payload, resource="media", hash_value=new_version)
+
+
+def _media_tree_watcher_loop(interval: int):
+    global _media_tree_watcher_hash
+    while True:
+        try:
+            version = _compute_media_tree_version()
+            if version and version != _media_tree_watcher_hash:
+                _media_tree_watcher_hash = version
+                _invalidate_media_structure_cache()
+                _publish_media_tree_change(version)
+        except Exception:
+            logger.exception("Watcher falló al comprobar la estructura de medios.")
+        time.sleep(interval)
+
+
+def _start_media_tree_watcher():
+    global _media_tree_watcher_thread, _media_tree_watcher_hash
+    if _media_tree_watcher_thread is not None:
+        return
+    _media_tree_watcher_hash = _compute_media_tree_version()
+    thread = threading.Thread(
+        target=_media_tree_watcher_loop,
+        args=(_MEDIA_TREE_WATCHER_INTERVAL,),
+        daemon=True,
+        name="media-tree-watcher",
+    )
+    _media_tree_watcher_thread = thread
+    thread.start()
+
+
+
 def _is_previewable_mime(mime_type: str | None) -> bool:
     if not mime_type:
         return False
@@ -529,6 +580,10 @@ def publish_media_update(
             "data": payload_data,
         },
     )
+
+
+if _MEDIA_TREE_WATCHER_ENABLED:
+    _start_media_tree_watcher()
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])

@@ -17,6 +17,7 @@ import {
 } from "./MediaModel";
 import { subscribeMediaTreeUpdates } from "./mediaUpdates";
 import { ErrorMessages } from "~/common/messageCatalog";
+import ApiHelper from "~/common/ApiHelper";
 import { useSocket } from "~/common/useSocket";
 
 interface MediaContextValue {
@@ -47,7 +48,8 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     const [useVersionPoll, setUseVersionPoll] = useState(true);
     const [mediaHash, setMediaHash] = useState("");
 
-    const { ready, subscribe } = useSocket("/ws/media-updates/");
+    const socketHost = new URL(ApiHelper.API_URL).host;
+    const { ready, subscribe } = useSocket("/ws/media-updates/", socketHost);
 
     //Carga el listado de directorios y ficheros del servidor
     const directoriesRef = useRef<DirectoryProps | undefined>(undefined);
