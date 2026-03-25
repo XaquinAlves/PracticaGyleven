@@ -49,11 +49,21 @@ class NeosResponse(TypedDict):
     neos: list[dict[str, Any]]
 
 def compute_hash(payload: NeosResponse) -> str:
+    """
+    Genera un hash SHA-256 determinista del payload de NEOs.
+    El diccionario debe contener la clave "neos" con la lista de asteroides,
+    lo que permite detectar cambios sin almacenar el objeto completo.
+    """
     serialized = json.dumps(payload, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 # Normaliza un decimal
 def _normalize_decimal(raw_value: str | None) -> str | None:
+    """
+    Normaliza un número en formato libre (con comas, puntos o símbolos como €)
+    y devuelve la representación con punto decimal sin espacios ni caracteres extraños.
+    Utiliza el string original o None para detectar valores vacíos.
+    """
     if not raw_value:
         return None
     value = raw_value.strip().replace("€", "").replace(" ", "")
@@ -72,6 +82,10 @@ def _normalize_decimal(raw_value: str | None) -> str | None:
 
 #Extrae los metadatos de una factura
 def _extract_invoice_metadata(text: str) -> dict[str, str | None]:
+    """
+    Extrae número, fecha y total aproximado de un texto OCR de factura.
+    Devuelve diccionario con los campos encontrados o None si no existen.
+    """
     invoice_number = None
     invoice_date = None
     total = None
@@ -104,6 +118,10 @@ def _extract_invoice_metadata(text: str) -> dict[str, str | None]:
 
 # Guarda una factura en media/invoices_by_pdf.csv
 def _records_from_dataframe(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """
+    Normaliza un DataFrame convertido a records, reemplazando NaN por None y
+    asegurando que todas las claves sean strings para serializar en JSON o comparaciones.
+    """
     df = df.where(pd.notnull(df))
     raw_records = df.to_dict(orient="records")
     result: list[dict[str, Any]] = []
@@ -117,11 +135,19 @@ def _records_from_dataframe(df: pd.DataFrame) -> list[dict[str, Any]]:
 
 
 def _compute_records_hash(records: list[dict[str, Any]]) -> str:
+    """
+    Calcula SHA-256 de la lista de registros de facturas, útil para emitir hashes
+    válidos en el canal y detectar cambios en los imports.
+    """
     serialized = json.dumps(records, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
 def _persist_invoices(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """
+    Añade facturas nuevas a media/invoices_by_pdf.csv, elimina duplicados conocidos,
+    limpia la cache de facturas y devuelve la lista preparada para publicar su hash.
+    """
     os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
     invoices_path = os.path.join(settings.MEDIA_ROOT, "invoices_by_pdf.csv")
     try:
@@ -143,6 +169,7 @@ def _persist_invoices(df: pd.DataFrame) -> list[dict[str, Any]]:
 
 
 def _get_cached_invoices() -> list[dict[str, Any]] | None:
+    """Recupera la entrada de cache de facturas si sigue vigente."""
     entry = _invoices_cache.get("entry")
     if not entry:
         return None
@@ -153,6 +180,7 @@ def _get_cached_invoices() -> list[dict[str, Any]] | None:
 
 
 def _set_invoices_cache(records: list[dict[str, Any]]) -> None:
+    """Guarda los registros de facturas junto con el momento de expiración."""
     _invoices_cache["entry"] = {
         "records": records,
         "expires_at": timezone.now() + _INVOICES_CACHE_TTL,
@@ -160,10 +188,15 @@ def _set_invoices_cache(records: list[dict[str, Any]]) -> None:
 
 
 def _invalidate_invoices_cache() -> None:
+    """Elimina la entrada de cache para forzar recálculo posterior."""
     _invoices_cache.pop("entry", None)
 
 # Sube el pdf de la factura a Media/Facturas/{archivo.pdf}
 def _save_pdf_to_facturas(uploaded_file, destination_root: str) -> str:
+    """
+    Guarda el archivo PDF recibido bajo Media/Facturas y evita colisiones agregando sufijos.
+    Devuelve la ruta absoluta donde fue almacenado.
+    """
     os.makedirs(destination_root, exist_ok=True)
     name_root, ext = os.path.splitext(uploaded_file.name)
     target_path = os.path.join(destination_root, uploaded_file.name)
@@ -181,6 +214,10 @@ def _save_pdf_to_facturas(uploaded_file, destination_root: str) -> str:
 
 # Devuelve un mapeado de una ruta con carpetas y archivos
 def _build_media_tree(base_path: Path) -> list[dict[str, Any]]:
+    """
+    Recorre recursivamente el contenido de MEDIA_ROOT para construir la estructura JSON
+    que expone el endpoint /registros/media-tree/.
+    """
     entries = []
     for entry in sorted(base_path.iterdir(), key=lambda p: p.name):
         relative_path = os.path.relpath(entry, settings.MEDIA_ROOT).replace("\\", "/")
@@ -206,6 +243,7 @@ def _build_media_tree(base_path: Path) -> list[dict[str, Any]]:
 
 
 def _collect_media_entries() -> list[str]:
+    """Lista todos los archivos con su timestamp y tamaño para calcular un hash único."""
     media_root = Path(settings.MEDIA_ROOT)
     if not media_root.exists():
         return []
@@ -220,6 +258,7 @@ def _collect_media_entries() -> list[str]:
 
 
 def _compute_media_tree_version() -> str:
+    """Genera el hash SHA-256 de la lista ordenada de entradas recogidas."""
     entries = _collect_media_entries()
     if not entries:
         return ""
@@ -234,6 +273,9 @@ def _format_error(
     code: str | None = None,
     errors: dict[str, list[str]] | None = None,
 ):
+    """
+    Construye un payload uniforme para errores de API con detalle, estado, código y errores.
+    """
     payload: dict[str, Any] = {
         "detail": detail,
         "status": status_code,
@@ -246,10 +288,15 @@ def _format_error(
 
 
 def _json_error(detail: str, status_code: int = status.HTTP_400_BAD_REQUEST):
+    """Devuelve una Response de error simple reutilizando el formateo estándar."""
     return _format_error(detail, status_code)
 
 
 def _sanitize_target_dir(raw_dir: str | None) -> str:
+    """
+    Limpia una ruta de destino para subidas de media: elimina barras redundantes y bloquea '..'.
+    Devuelve cadena vacía si solo venía vacío o relativo inválido.
+    """
     if not raw_dir:
         return ""
     normalized = raw_dir.strip().replace("\\", "/")
@@ -263,10 +310,14 @@ def _sanitize_target_dir(raw_dir: str | None) -> str:
 
 
 def _important_files_csv_path() -> str:
+    """Devuelve la ruta absoluta del CSV de archivos importantes dentro de MEDIA_ROOT."""
     return os.path.join(settings.MEDIA_ROOT, "important_files.csv")
 
 
 def _sanitize_relative_path(raw_path: str) -> str:
+    """
+    Normaliza la ruta relativa de un archivo/carpetas, quita '../' y valida que no quede vacía.
+    """
     normalized = raw_path.strip().replace("\\", "/")
     normalized = normalized.strip("/")
     if not normalized:
@@ -280,6 +331,9 @@ def _sanitize_relative_path(raw_path: str) -> str:
 
 
 def _load_important_records() -> pd.DataFrame:
+    """
+    Lee el CSV de archivos importantes y devuelve DataFrame con columnas estandarizadas.
+    """
     columns = ["relative_path", "is_important", "marked_at", "marked_by"]
     csv_path = _important_files_csv_path()
     if os.path.exists(csv_path):
@@ -301,11 +355,15 @@ def _load_important_records() -> pd.DataFrame:
 
 
 def _persist_important_records(df: pd.DataFrame):
+    """
+    Persiste el DataFrame de registros importantes en disco y mantiene la carpeta media existente.
+    """
     os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
     df.to_csv(_important_files_csv_path(), index=False)
 
 
 def _get_cached_media_structure() -> tuple[list[dict[str, Any]], str] | None:
+    """Retorna el árbol de media/version almacenado en cache si no expiró."""
     entry = _media_structure_cache.get("entry")
     if not entry:
         return None
@@ -316,6 +374,7 @@ def _get_cached_media_structure() -> tuple[list[dict[str, Any]], str] | None:
 
 
 def _set_media_structure_cache(tree: list[dict[str, Any]], version: str) -> None:
+    """Persist o en memoria el árbol con su versión hash para evitar recálculos frecuentes."""
     _media_structure_cache["entry"] = {
         "tree": tree,
         "version": version,
@@ -324,10 +383,12 @@ def _set_media_structure_cache(tree: list[dict[str, Any]], version: str) -> None
 
 
 def _invalidate_media_structure_cache() -> None:
+    """Borra la cache del árbol de media para forzar recálculo en la próxima petición."""
     _media_structure_cache.pop("entry", None)
 
 
 def _publish_media_tree_change(new_version: str) -> None:
+    """Publica un evento de refresh del recurso media con el hash calculado del árbol."""
     payload = {
         "action": "refresh",
         "timestamp": datetime.utcnow().isoformat(),
@@ -336,6 +397,7 @@ def _publish_media_tree_change(new_version: str) -> None:
 
 
 def _media_tree_watcher_loop(interval: int):
+    """Hilo que periódicamente recalcula la versión del árbol y publica cambios si detecta variación."""
     global _media_tree_watcher_hash
     while True:
         try:
@@ -350,6 +412,7 @@ def _media_tree_watcher_loop(interval: int):
 
 
 def _start_media_tree_watcher():
+    """Inicializa y arranca el hilo watcher que vigila el hash del media tree."""
     global _media_tree_watcher_thread, _media_tree_watcher_hash
     if _media_tree_watcher_thread is not None:
         return
@@ -366,6 +429,7 @@ def _start_media_tree_watcher():
 
 
 def _is_previewable_mime(mime_type: str | None) -> bool:
+    """Indica si un MIME puede abrirse inline (imagen, texto, pdf, xml, html)."""
     if not mime_type:
         return False
     previewable_prefixes = ("image/", "text/")
@@ -380,6 +444,7 @@ def _is_previewable_mime(mime_type: str | None) -> bool:
     )
 
 def _get_cached_neos() -> tuple[NeosResponse, str] | None:
+    """Recupera la tupla (respuesta, hash) de la página 0 si aún no expiró."""
     entry = _neos_cache.get(_NEOS_CACHE_KEY)
     if not entry:
         return None
@@ -390,6 +455,7 @@ def _get_cached_neos() -> tuple[NeosResponse, str] | None:
 
 
 def _set_cached_neos(response: NeosResponse, response_hash: str) -> None:
+    """Guarda la respuesta y su hash con expiración para la página 0."""
     _neos_cache[_NEOS_CACHE_KEY] = {
         "response": response,
         "hash": response_hash,
@@ -398,11 +464,13 @@ def _set_cached_neos(response: NeosResponse, response_hash: str) -> None:
 
 
 def _invalidate_neos_cache() -> None:
+    """Elimina la caché de NEOS para forzar refetches futuros."""
     _neos_cache.pop(_NEOS_CACHE_KEY, None)
 # Public Views
 
 
 def publish_neos_update(hash_value: str | None = None) -> None:
+    """Publica un refresh con resource=neos para notificar cambios en la página 0."""
     payload = {
         "action": "refresh",
         "timestamp": datetime.utcnow().isoformat(),
@@ -410,6 +478,10 @@ def publish_neos_update(hash_value: str | None = None) -> None:
     publish_media_update(payload, resource="neos", hash_value=hash_value)
 
 def fetch_from_external_api(page: int) -> NeosResponse | Response:
+    """
+    Consulta la API de NASA para obtener asteroides paginados y normaliza su schema.
+    Devuelve Response de error en caso de fallo HTTP o JSON malformado.
+    """
     api_key = os.getenv("NASA_API_KEY")
     if not api_key:
         return _json_error(
@@ -460,6 +532,10 @@ def fetch_from_external_api(page: int) -> NeosResponse | Response:
         )
 
 def get_neos_by_page(request, page: int):
+    """
+    Endpoint que devuelve la página solicitada de NEOS, usa cache para page=0 y actualiza hashes.
+    Publica hash cuando cambia el contenido y controla errores 400/502.
+    """
     previous_entry: tuple[NeosResponse, str] | None = None
     cached_entry: tuple[NeosResponse, str] | None = None
     if page == _MIN_NEOS_PAGE:
@@ -488,6 +564,10 @@ def get_neos_by_page(request, page: int):
     return JsonResponse({"neos": response["neos"], "cached": False})
 
 def save_neos(request):
+    """
+    Guarda en la base de datos los NEOS enviados y publica un refresh con resource=neos y hash.
+    Maneja excepciones logueando errores y responde 200 con mensaje de éxito.
+    """
     try:
         payload = json.loads(request.body)
     except json.JSONDecodeError as exc:
@@ -525,6 +605,10 @@ def save_neos(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def list_facturas(request):
+    """
+    Lista las facturas registradas leyendo invoices_by_pdf.csv y usa cache TTL para evitar relecturas.
+    Publica hash sólo cuando se invalida la cache por nuevos registros.
+    """
     cached = _get_cached_invoices()
     if cached is not None:
         return Response(cached)
@@ -559,6 +643,10 @@ def publish_media_update(
     resource: str = "media",
     hash_value: str | None = None,
 ) -> None:
+    """
+    Publica un evento 'media.update' en el grupo media-tree con payload, resource y hash.
+    Añade timestamp y registra en logs el channel layer utilizado.
+    """
     channel_layer = get_channel_layer()
     if not channel_layer:
         logger.warning("No se pudo notificar media-tree: channel layer no disponible")
@@ -588,6 +676,10 @@ if _MEDIA_TREE_WATCHER_ENABLED:
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def upload_to_media(request):
+    """
+    Recibe archivos multipart/form-data, los guarda en MEDIA_ROOT, genera registros históricos
+    y publica resource=media con el hash actualizado del árbol.
+    """
     try:
         target_dir = _sanitize_target_dir(request.data.get("target_dir"))
     except ValueError as exc:
@@ -719,6 +811,10 @@ def upload_to_media(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def leer_factura_pdf(request):
+    """
+    Procesa PDFs recibidos, extrae metadatos, los persiste y publica eventos de media/invoices.
+    Responde con el detalle de cada intento (exitoso o con error).
+    """
     files = request.FILES.getlist("pdfs")
     if not files:
         single = request.FILES.get("file")
@@ -811,6 +907,9 @@ def leer_factura_pdf(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def list_media_structure(request):
+    """
+    Devuelve la estructura completa de MEDIA_ROOT, usando cache para evitar recomputar cada vez.
+    """
     media_root = Path(settings.MEDIA_ROOT)
     if not media_root.exists():
         return Response([], status=status.HTTP_200_OK)
@@ -836,6 +935,9 @@ def list_media_structure(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def media_tree_version(request):
+    """
+    Calcula y devuelve el hash actual del árbol de media; usa el cache si sigue vigente.
+    """
     try:
         cached = _get_cached_media_structure()
         if cached is not None:
@@ -856,6 +958,10 @@ def _parse_block_size(
     default_block: int,
     max_block_size: int,
 ) -> tuple[int, Response | None]:
+    """
+    Valida y normaliza el tamaño de bloque deseado para descargas parciales.
+    Retorna el block_size ajustado y un Response de error cuando los valores son inválidos.
+    """
     if raw_block is None:
         return default_block, None
     try:
@@ -872,6 +978,10 @@ def _parse_block_size(
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def download_media_file(request):
+    """
+    Descarga un archivo dentro de MEDIA_ROOT con control de path, MIME y block_size seguro.
+    Retorna FileResponse con block_size y Content-Disposition adecuados.
+    """
     #Obtiene el parametro de la ruta del archivo a descargar, y comprueba que es válido
     relative_path = request.query_params.get("path")
     if not relative_path:
@@ -933,6 +1043,9 @@ def download_media_file(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def list_important_files(request):
+    """
+    Lista los registros guardados de archivos marcados como importantes (CSV).
+    """
     try:
         df = _load_important_records()
         records = df.to_dict(orient="records")
@@ -949,6 +1062,10 @@ def list_important_files(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def toggle_important_file(request):
+    """
+    Marca o desmarca un archivo como importante, actualiza el CSV y publica resource=media.
+    Valida el relative_path y el flag antes de persistir.
+    """
     relative_path = request.data.get("relative_path")
     important_flag = request.data.get("important")
 

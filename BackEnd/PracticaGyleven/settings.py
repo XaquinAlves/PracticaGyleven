@@ -21,6 +21,10 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
 
+
+MEDIA_TREE_WATCHER_ENABLED = True
+MEDIA_TREE_WATCHER_INTERVAL = 15  # seconds between hash checks
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
