@@ -50,7 +50,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     const { ready, subscribe } = useSocket("/ws/media-updates/");
 
     //Carga el listado de directorios y ficheros del servidor
-    const directoriesRef = useRef<DirectoryProps>();
+    const directoriesRef = useRef<DirectoryProps | undefined>(undefined);
     useEffect(() => {
         directoriesRef.current = directories;
     }, [directories]);
@@ -65,26 +65,25 @@ export function MediaProvider({ children }: { children: ReactNode }) {
                     return directoriesRef.current;
                 }
                 //Carga el arbol de archivos y lo establece
-        const entries = await fetchMediaTree();
-        const root: DirectoryProps = {
-            name: "media",
-            type: "directory",
-            relativePath: "",
-            children: entries,
-        };
-        setDirectories(root);
-        //Carga los archivos marcados como importantes
-        const important = await fetchImportantFiles();
-        setImportantFiles(important);
-        if (useVersionPoll) {
-            const version = await fetchMediaTreeVersion();
-            setTreeVersion(version);
-            setMediaHash(version);
-        } else {
-            setTreeVersion("");
-            setMediaHash("");
-        }
-        return root;
+                const entries = await fetchMediaTree();
+                const root: DirectoryProps = {
+                    name: "media",
+                    type: "directory",
+                    relativePath: "",
+                    children: entries,
+                };
+                setDirectories(root);
+                const important = await fetchImportantFiles();
+                setImportantFiles(important);
+                if (useVersionPoll) {
+                    const version = await fetchMediaTreeVersion();
+                    setTreeVersion(version);
+                    setMediaHash(version);
+                } else {
+                    setTreeVersion("");
+                    setMediaHash("");
+                }
+                return root;
             } catch (err) {
                 setError(
                     err instanceof Error ? err.message : ErrorMessages.mediaError,
@@ -194,13 +193,17 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         [expandedDirectories],
     );
 
+    const refresh = useCallback(async () => {
+        await loadMedia({ force: true });
+    }, [loadMedia]);
+
     const value = useMemo(
         () => ({
             directories,
             importantFiles,
             loading,
             error,
-            refresh: loadMedia,
+            refresh,
             toggleDirectory,
             isDirectoryExpanded,
         }),
@@ -209,7 +212,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
             importantFiles,
             loading,
             error,
-            loadMedia,
+            refresh,
             toggleDirectory,
             isDirectoryExpanded,
         ],
