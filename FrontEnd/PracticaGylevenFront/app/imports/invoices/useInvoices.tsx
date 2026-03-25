@@ -32,8 +32,10 @@ export function InvoicesProvider({
     const [invoices, setInvoices] = useState<InvoiceProps[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [invoicesHash, setInvoicesHash] = useState("");
     const cacheRef = useRef<InvoiceProps[] | null>(null);
     const { ready, subscribe } = useSocket("/ws/media-updates/");
+    const invoicesHashRef = useRef(invoicesHash);
 
     const loadInvoices = useCallback(
         async (options?: { force?: boolean }) => {
@@ -72,15 +74,37 @@ export function InvoicesProvider({
     }, [loadInvoices]);
 
     useEffect(() => {
+        invoicesHashRef.current = invoicesHash;
+    }, [invoicesHash]);
+
+    useEffect(() => {
         const unsubscribe = subscribe((data) => {
             if (typeof data !== "object" || data === null) {
                 return;
             }
-            const payload = data as { action?: string; resource?: string };
+            const payload = data as {
+                action?: string;
+                resource?: string;
+                hash?: string;
+            };
             if (payload.action !== "refresh") {
                 return;
             }
-            if (!payload.resource || payload.resource === "media" || payload.resource === "invoices") {
+            if (
+                payload.resource === "media" ||
+                payload.resource === "invoices" ||
+                !payload.resource
+            ) {
+                if (
+                    payload.resource === "invoices" &&
+                    payload.hash &&
+                    payload.hash === invoicesHashRef.current
+                ) {
+                    return;
+                }
+                if (payload.resource === "invoices" && payload.hash) {
+                    setInvoicesHash(payload.hash);
+                }
                 void loadInvoicesRef.current?.({ force: true });
             }
         });

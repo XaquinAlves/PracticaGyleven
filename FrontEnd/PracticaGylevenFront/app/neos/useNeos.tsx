@@ -151,6 +151,8 @@ export function NeosProvider({
     );
 
     const loadNeosRef = useRef(loadNeos);
+    const [neosHash, setNeosHash] = useState("");
+    const neosHashRef = useRef(neosHash);
     const { subscribe: subscribeSocket } = useSocket("/ws/media-updates/");
 
     useEffect(() => {
@@ -165,10 +167,24 @@ export function NeosProvider({
     }, []);
 
     useEffect(() => {
+        neosHashRef.current = neosHash;
+    }, [neosHash]);
+
+    useEffect(() => {
         const unsubscribe = subscribeSocket((data) => {
             if (typeof data === "object" && data !== null) {
-                const payload = data as { action?: string; resource?: string };
+                const payload = data as {
+                    action?: string;
+                    resource?: string;
+                    hash?: string;
+                };
                 if (payload.action === "refresh" && payload.resource === "neos") {
+                    if (payload.hash && payload.hash === neosHashRef.current) {
+                        return;
+                    }
+                    if (payload.hash) {
+                        setNeosHash(payload.hash);
+                    }
                     void loadNeosRef.current?.({ force: true });
                 }
             }

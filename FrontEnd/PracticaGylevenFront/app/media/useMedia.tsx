@@ -45,6 +45,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     const [error, setError] = useState("");
     const [treeVersion, setTreeVersion] = useState("");
     const [useVersionPoll, setUseVersionPoll] = useState(true);
+    const [mediaHash, setMediaHash] = useState("");
 
     const { ready, subscribe } = useSocket("/ws/media-updates/");
 
@@ -64,24 +65,26 @@ export function MediaProvider({ children }: { children: ReactNode }) {
                     return directoriesRef.current;
                 }
                 //Carga el arbol de archivos y lo establece
-                const entries = await fetchMediaTree();
-                const root: DirectoryProps = {
-                    name: "media",
-                    type: "directory",
-                    relativePath: "",
-                    children: entries,
-                };
-                setDirectories(root);
-                //Carga los archivos marcados como importantes
-                const important = await fetchImportantFiles();
-                setImportantFiles(important);
-                if (useVersionPoll) {
-                    const version = await fetchMediaTreeVersion();
-                    setTreeVersion(version);
-                } else {
-                    setTreeVersion("");
-                }
-                return root;
+        const entries = await fetchMediaTree();
+        const root: DirectoryProps = {
+            name: "media",
+            type: "directory",
+            relativePath: "",
+            children: entries,
+        };
+        setDirectories(root);
+        //Carga los archivos marcados como importantes
+        const important = await fetchImportantFiles();
+        setImportantFiles(important);
+        if (useVersionPoll) {
+            const version = await fetchMediaTreeVersion();
+            setTreeVersion(version);
+            setMediaHash(version);
+        } else {
+            setTreeVersion("");
+            setMediaHash("");
+        }
+        return root;
             } catch (err) {
                 setError(
                     err instanceof Error ? err.message : ErrorMessages.mediaError,
@@ -119,10 +122,15 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     }, [loading, loadMedia, treeVersion, useVersionPoll]);
 
     const loadMediaRef = useRef(loadMedia);
+    const mediaHashRef = useRef(mediaHash);
 
     useEffect(() => {
         loadMediaRef.current = loadMedia;
     }, [loadMedia]);
+
+    useEffect(() => {
+        mediaHashRef.current = mediaHash;
+    }, [mediaHash]);
 
     useEffect(() => {
         const unsubscribe = subscribe((data) => {
@@ -130,9 +138,23 @@ export function MediaProvider({ children }: { children: ReactNode }) {
                 return;
             }
             if (typeof data === "object" && data !== null) {
-                const typed = data as { action?: string };
+                const typed = data as {
+                    action?: string;
+                    resource?: string;
+                    hash?: string;
+                };
                 if (typed.action === "refresh") {
-                    void loadMediaRef.current?.();
+                    if (
+                        typed.resource === "media" &&
+                        typed.hash &&
+                        typed.hash === mediaHashRef.current
+                    ) {
+                        return;
+                    }
+                    if (typed.resource === "media" && typed.hash) {
+                        setMediaHash(typed.hash);
+                    }
+                    void loadMediaRef.current?.({ force: true });
                 }
             }
         });

@@ -107,20 +107,7 @@ class MediaWebsocketTests(ChannelsLiveServerTestCase):
         self.assertTrue(self.client.login(username=self.user.username, password="secret"))
         self.client.get(reverse("media-tree"))
         self.http_session = requests.Session()
-        parsed = urlparse(self.live_server_url)
-        cookie_domain = parsed.hostname
-        cookie_values = []
-        for cookie_name in ("sessionid", "csrftoken"):
-            value = self.client.cookies.get(cookie_name)
-            if value and cookie_domain:
-                cookie = requests.cookies.create_cookie(
-                    name=cookie_name,
-                    value=value,
-                    domain=cookie_domain,
-                    path="/",
-                )
-                self.http_session.cookies.set_cookie(cookie)
-                cookie_values.append(f"{cookie_name}={value}")
+        self.http_session.cookies.update(self.client.cookies)
         csrf_token = self.http_session.cookies.get("csrftoken")
         headers = {
             "Referer": self.live_server_url,
@@ -128,8 +115,6 @@ class MediaWebsocketTests(ChannelsLiveServerTestCase):
         }
         if csrf_token:
             headers["X-CSRFToken"] = csrf_token
-        if cookie_values:
-            headers["Cookie"] = "; ".join(cookie_values)
         self.http_session.headers.update(headers)
 
     def _open_websocket(self):
