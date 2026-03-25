@@ -36,6 +36,9 @@ function normalizeRelativePath(relativePath?: string) {
 
 const MediaContext = createContext<MediaContextValue | undefined>(undefined);
 
+/**
+ * Provee el contexto de media (directorios, importantes, loading, errores) y maneja refrescos vía WebSocket.
+ */
 export function MediaProvider({ children }: { children: ReactNode }) {
     const [expandedDirectories, setExpandedDirectories] = useState<string[]>(
         [],
@@ -49,6 +52,10 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     const [mediaHash, setMediaHash] = useState("");
 
     const socketHost = new URL(ApiHelper.API_URL).host;
+    /**
+     * Hook que expone la estructura del árbol de media, archivos importantes y métodos
+     * para refrescar/expander directorios. Atiende eventos WebSocket `resource="media"`.
+     */
     const { ready, subscribe } = useSocket("/ws/media-updates/", socketHost);
 
     //Carga el listado de directorios y ficheros del servidor
@@ -57,6 +64,10 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         directoriesRef.current = directories;
     }, [directories]);
 
+    /**
+     * Carga la estructura completa del árbol, archivos importantes y actualiza hashes.
+     * Si el socket ya reporta `ready`, usa la cache para evitar solicitudes duplicadas.
+     */
     const loadMedia = useCallback(
         async (options?: { force?: boolean }) => {
             const force = options?.force ?? false;
@@ -177,7 +188,9 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         return unsubscribe;
     }, [loadMedia, loading, ready]);
 
-    //Para abrir/cerrar una carpeta
+    /**
+     * Alterna la expansión de un directorio conservando la lista de expanders actuales.
+     */
     const toggleDirectory = useCallback((relativePath: string) => {
         setExpandedDirectories((previous) => {
             const normalized = normalizeRelativePath(relativePath);
@@ -188,13 +201,18 @@ export function MediaProvider({ children }: { children: ReactNode }) {
             return [...previous, normalized];
         });
     }, []);
-    //Para comprobar si la carpeta estaba abierta cuando hay una recarga
+    /**
+     * Devuelve si un directorio está expandido (normaliza la ruta).
+     */
     const isDirectoryExpanded = useCallback(
         (relativePath: string) =>
             expandedDirectories.includes(normalizeRelativePath(relativePath)),
         [expandedDirectories],
     );
 
+    /**
+     * Fuerza la recarga del árbol solicitando `loadMedia` con `force: true`.
+     */
     const refresh = useCallback(async () => {
         await loadMedia({ force: true });
     }, [loadMedia]);

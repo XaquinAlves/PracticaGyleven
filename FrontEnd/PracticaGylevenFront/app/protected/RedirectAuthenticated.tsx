@@ -1,6 +1,9 @@
 import { Navigate, Outlet } from "react-router";
 import { useRequireNoAuth } from "~/session/auth";
 
+/**
+ * Layout público que redirige a `/inicio` si el usuario ya está autenticado.
+ */
 export default function LoginGate() {
     const { isLoading, isAuthenticated } = useRequireNoAuth();
 

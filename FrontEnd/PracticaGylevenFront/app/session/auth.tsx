@@ -19,6 +19,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/** Provee el estado global de autenticación y permite refrescar el token. */
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [status, setStatus] = useState<AuthStatus>("loading");
 
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 }
 
+/** Hook que expone el contexto de autenticación. */
 export function useAuth() {
     const context = useContext(AuthContext);
     if (!context) {
@@ -58,6 +60,10 @@ export function useAuth() {
     return context;
 }
 
+/**
+ * Hook que redirige a `/login` cuando el usuario no está autenticado.
+ * @param redirectTo - ruta destino cuando no hay sesión activa.
+ */
 export function useRequireAuth({
     redirectTo = "/login",
 }: { redirectTo?: string } = {}) {
@@ -83,6 +89,10 @@ export function useRequireAuth({
     };
 }
 
+/**
+ * Hook para rutas públicas: redirige a `/inicio` si el usuario ya está autenticado.
+ * @param redirectTo - ruta que recibe al usuario autenticado.
+ */
 export function useRequireNoAuth({
     redirectTo = "/inicio",
 }: { redirectTo?: string } = {}) {

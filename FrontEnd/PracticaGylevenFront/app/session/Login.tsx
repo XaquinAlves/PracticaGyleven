@@ -6,6 +6,9 @@ import ErrorAlert from "~/common/ErrorAlert";
 let username = "";
 let password = "";
 
+/**
+ * Pantalla de login que actualiza los valores globales y llama a `login` al enviar.
+ */
 export default function Login() {
     const navigate = useNavigate();
     const [error, setError] = useState<string>("");
@@ -86,10 +89,12 @@ export default function Login() {
     );
 }
 
+/** Actualiza la contraseña temporal antes de enviar el formulario. */
 function handlePasswordChange(event: React.ChangeEvent<HTMLInputElement>) {
     password = event.target.value;
 }
 
+/** Actualiza el nombre de usuario temporal mientras se completa el formulario. */
 function handleUserNameChange(event: React.ChangeEvent<HTMLInputElement>) {
     username = event.target.value;
 }

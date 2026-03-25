@@ -12,6 +12,7 @@ import {
 } from "./useNeos";
 import { getNeosViewPhase } from "./neosViewState";
 
+/** Vista envoltura que utiliza `NeosProvider`. */
 export default function NeosView() {
     return (
         <NeosProvider>
@@ -22,6 +23,9 @@ export default function NeosView() {
 
 type UseNeosHook = () => NeosContextValue;
 
+/**
+ * Contenido que enseña el formulario de paginación y la tabla usando el hook `useNeos`.
+ */
 export function NeosViewContent({
     useNeosHook = useNeos,
 }: {

@@ -3,6 +3,9 @@ import { useState } from "react";
 import ErrorAlert from "~/common/ErrorAlert";
 import { changePass } from "~/session/SessionController";
 
+/**
+ * Formulario que envía al backend la solicitud de cambio de contraseña mediante `changePass`.
+ */
 export default function ChangePass() {
     const [oldPassword, setOldPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
@@ -13,6 +16,9 @@ export default function ChangePass() {
     } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    /**
+     * Envía el formulario y actualiza el estado según la respuesta.
+     */
     const handleSubmit = async (evn: React.FormEvent<HTMLFormElement>) => {
         evn.preventDefault();
         setStatus(null);

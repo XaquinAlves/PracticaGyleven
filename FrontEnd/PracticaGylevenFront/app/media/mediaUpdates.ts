@@ -4,6 +4,12 @@ const canUseWindow = typeof window !== "undefined";
 
 export type MediaUpdateHandler = () => void;
 
+/**
+ * Se subscribe a actualizaciones del canal `media-tree-updates` y devuelve una función de cleanup.
+ * Usa BroadcastChannel cuando está disponible o storage events como fallback.
+ * @param handler - callback que se ejecuta cuando otro tab u otro emisor publica un refresh.
+ * @returns función para eliminar los listeners.
+ */
 export function subscribeMediaTreeUpdates(handler: MediaUpdateHandler) {
     if (typeof BroadcastChannel === "function") {
         const channel = new BroadcastChannel(CHANNEL_NAME);
@@ -28,6 +34,10 @@ export function subscribeMediaTreeUpdates(handler: MediaUpdateHandler) {
     return () => window.removeEventListener("storage", storageHandler);
 }
 
+/**
+ * Publica un evento de invalidación del árbol `media-tree` para otras pestañas.
+ * Prioriza BroadcastChannel y usa localStorage como fallback para que el evento viaje.
+ */
 export function publishMediaTreeUpdate() {
     if (typeof BroadcastChannel === "function") {
         const channel = new BroadcastChannel(CHANNEL_NAME);

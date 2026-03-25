@@ -3,6 +3,9 @@ import ErrorAlert from "~/common/ErrorAlert";
 import { type ImportantFile, type ImportantTableProps } from "./MediaModel";
 import { MediaProvider, useMedia } from "./useMedia";
 
+/**
+ * Layout que envuelve la vista de archivos importantes con el proveedor de media.
+ */
 export default function ImportantFilesView() {
     return (
         <MediaProvider>
@@ -11,6 +14,9 @@ export default function ImportantFilesView() {
     );
 }
 
+/**
+ * Muestra una tabla con archivos importantes, maneja estados de carga y errores usando `useMedia`.
+ */
 export function ImportantFilesViewContent() {
     const { importantFiles, loading, error, refresh } = useMedia();
 
@@ -43,6 +49,9 @@ export function ImportantFilesViewContent() {
     );
 }
 
+/**
+ * Fila de tabla que renderiza los metadatos de un archivo importante.
+ */
 export function ImportantFile({
     relative_path,
     marked_at,
@@ -57,6 +66,10 @@ export function ImportantFile({
     );
 }
 
+/**
+ * Tabla que muestra los archivos importantes pasados como prop.
+ * Añade encabezados descriptivos y reutiliza `ImportantFile` para cada fila.
+ */
 export function ImportantFilesTable({ important_files }: ImportantTableProps) {
     if (important_files !== undefined) {
         return (

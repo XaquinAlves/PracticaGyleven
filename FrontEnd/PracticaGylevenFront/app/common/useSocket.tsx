@@ -9,6 +9,11 @@ interface UseSocketResult {
 
 const canUseWindow = typeof window !== "undefined";
 
+/**
+ * Construye la URL completa del WebSocket para el backend.
+ * @param path Ruta del socket (ejemplo: "/ws/media-updates/").
+ * @param hostOverride Host del backend cuando no coincide con window.location.host.
+ */
 function buildWebSocketUrl(path: string, hostOverride?: string) {
     if (!canUseWindow) {
         return "";
@@ -18,31 +23,43 @@ function buildWebSocketUrl(path: string, hostOverride?: string) {
         hostOverride ??
         (apiUrl
             ? (() => {
-                  try {
-                      return new URL(apiUrl).host;
-                  } catch {
-                      return window.location.host;
-                  }
-              })()
+                try {
+                    return new URL(apiUrl).host;
+                } catch {
+                    return window.location.host;
+                }
+            })()
             : window.location.host);
     const scheme = window.location.protocol === "https:" ? "wss" : "ws";
     return `${scheme}://${fallbackHost}${path}`;
 }
 
-export function useSocket(path: string, hostOverride?: string): UseSocketResult {
+/**
+ * Hook que abre y mantiene una conexión WebSocket con reconexión automática.
+ * @param path Ruta del socket relativo.
+ * @param hostOverride Host personalizado (usualmente el host del backend).
+ * @returns Objeto `{ ready, subscribe }` donde `ready` indica estado conectado y `subscribe` permite registrar handlers JSON.
+ */
+export function useSocket(
+    path: string,
+    hostOverride?: string,
+): UseSocketResult {
     const [ready, setReady] = useState(false);
     const handlersRef = useRef<MessageHandler[]>([]);
     const socketRef = useRef<WebSocket | null>(null);
     const reconnectTimerRef = useRef<number | undefined>(undefined);
-    const url = useMemo(() => buildWebSocketUrl(path, hostOverride), [
-        path,
-        hostOverride,
-    ]);
+    const url = useMemo(
+        () => buildWebSocketUrl(path, hostOverride),
+        [path, hostOverride],
+    );
 
     const dispatch = useCallback((data: unknown) => {
         handlersRef.current.forEach((handler) => handler(data));
     }, []);
 
+    /**
+     * Crea la conexión WebSocket, se reintenta tras cerrar y actualiza `ready`.
+     */
     const connect = useCallback(() => {
         if (!canUseWindow || !url) {
             return;
@@ -79,6 +96,9 @@ export function useSocket(path: string, hostOverride?: string): UseSocketResult 
         });
     }, [dispatch, url]);
 
+    /**
+     * Establece el efecto que abre la conexión y se cierra al desmontar.
+     */
     useEffect(() => {
         if (!canUseWindow || !url) {
             return () => undefined;

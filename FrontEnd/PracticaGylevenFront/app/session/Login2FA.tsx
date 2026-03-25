@@ -5,6 +5,9 @@ import { login2fa } from "./SessionController";
 
 const CODE_REGEX = /^\d{6}$/;
 
+/**
+ * Pantalla que solicita el código TOTP y llama a `login2fa`.
+ */
 export default function Login2FA() {
     const [code, setCode] = useState("");
     const [status, setStatus] = useState<{
@@ -13,6 +16,7 @@ export default function Login2FA() {
     } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    /** Valida el código y envía la petición de 2FA. */
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setStatus(null);

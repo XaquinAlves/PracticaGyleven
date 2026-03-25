@@ -1,3 +1,6 @@
+/**
+ * Props usadas por el componente de alerta de error reutilizable.
+ */
 interface ErrorAlertProps {
     message: string;
     onRetry?: () => void;

@@ -1,6 +1,9 @@
 import { memo } from "react";
 import type { InvoiceProps, InvoiceTableProps } from "./InvoicesModel";
 
+/**
+ * Fila que representa una factura con los campos ya extraídos.
+ */
 export const Invoice = memo(function Invoice({
     name,
     page_count,
@@ -21,6 +24,9 @@ export const Invoice = memo(function Invoice({
     );
 });
 
+/**
+ * Tabla que muestra la lista de facturas y reusea `Invoice` en cada fila.
+ */
 function InvoicesTableBase({ invoices }: InvoiceTableProps) {
     return (
         <table className="table table-striped table-bordered">

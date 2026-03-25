@@ -73,6 +73,11 @@ interface ApiDirectoryEntry extends ApiBaseEntry {
 
 type ApiEntry = ApiFileEntry | ApiDirectoryEntry;
 
+/**
+ * Convierte el payload del backend al formato que usan los componentes del árbol de media.
+ * @param entry Entrada cruda de la API.
+ * @returns `FileProps` o `DirectoryProps` con campos `relativePath` y `children` ya normalizados.
+ */
 function normalizeEntry(entry: ApiEntry): FileProps | DirectoryProps {
     if (entry.type === "directory") {
         return {
@@ -90,6 +95,10 @@ function normalizeEntry(entry: ApiEntry): FileProps | DirectoryProps {
     };
 }
 
+/**
+ * Solicita el árbol completo de `media` y lo mapea ejecutando `normalizeEntry`.
+ * @throws Error con el detalle del backend si la petición falla.
+ */
 export async function fetchMediaTree() {
     const response = await fetch(ApiHelper.API_URL + "/registros/media-tree/", {
         headers: ApiHelper.getJsonHeaders(false),
@@ -103,6 +112,9 @@ export async function fetchMediaTree() {
     return data.map(normalizeEntry);
 }
 
+/**
+ * Obtiene los archivos marcados como importantes y descarta los que no están activos.
+ */
 export async function fetchImportantFiles() {
     const response = await fetch(
         ApiHelper.API_URL + "/registros/media/important-files/",
@@ -119,6 +131,9 @@ export async function fetchImportantFiles() {
     return data.filter((file) => file.is_important);
 }
 
+/**
+ * Recupera la versión/hash actual del árbol (`tree_version`) para detectar cambios sin recargar toda la estructura.
+ */
 export async function fetchMediaTreeVersion() {
     const response = await fetch(
         ApiHelper.API_URL + "/registros/media-tree/version/",
@@ -135,6 +150,12 @@ export async function fetchMediaTreeVersion() {
     return data.tree_version ?? "";
 }
 
+/**
+ * Marca o desmarca un archivo como importante enviando su ruta al backend.
+ * @param relativePath - ruta relativa dentro de `media/`.
+ * @param important - `true` para marcar como importante, `false` para quitar.
+ * @returns payload JSON de la opción toggled.
+ */
 export async function toggleImportantFile(
     relativePath: string,
     important: boolean,

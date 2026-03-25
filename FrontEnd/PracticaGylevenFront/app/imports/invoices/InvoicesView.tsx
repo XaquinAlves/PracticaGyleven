@@ -5,6 +5,9 @@ import ErrorAlert from "~/common/ErrorAlert";
 import { ErrorMessages } from "~/common/messageCatalog";
 import { InvoicesProvider, useInvoices } from "./useInvoices";
 
+/**
+ * Contenedor de la vista de facturas que envuelve el contenido con `InvoicesProvider`.
+ */
 export default function InvoicesView() {
     return (
         <InvoicesProvider>
@@ -13,6 +16,9 @@ export default function InvoicesView() {
     );
 }
 
+/**
+ * Muestra el estado cargando/error o la tabla de facturas; refresca al subir nuevos archivos.
+ */
 export function InvoicesViewContent() {
     const { invoices, loading, error, refresh } = useInvoices();
     const handleRefresh = () => {

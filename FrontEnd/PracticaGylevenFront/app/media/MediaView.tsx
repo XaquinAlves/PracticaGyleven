@@ -5,6 +5,9 @@ import ErrorAlert from "~/common/ErrorAlert";
 import { ErrorMessages } from "~/common/messageCatalog";
 import { MediaProvider, useMedia } from "./useMedia";
 
+/**
+ * Vista principal del módulo Media. Envuelve el contenido con `MediaProvider`.
+ */
 export default function MediaView() {
     return (
         <MediaProvider>
@@ -13,6 +16,10 @@ export default function MediaView() {
     );
 }
 
+/**
+ * Componente que muestra el formulario de subida, los errores/cargando y el árbol de directorios.
+ * Consume `useMedia` para cargar la estructura, refrescar y mostrar errores si falla el fetch.
+ */
 export function MediaViewContent() {
     const { directories, loading, error, refresh } = useMedia();
 

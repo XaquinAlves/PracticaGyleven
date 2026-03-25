@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from "react-router";
 import { useRequireAuth } from "./auth";
 
+/** Guarda rutas protegidas mostrando spinner mientras se valida la sesión. */
 export default function SessionGate() {
     const { isLoading, isAuthenticated } = useRequireAuth();
 

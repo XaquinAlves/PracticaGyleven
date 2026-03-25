@@ -5,6 +5,9 @@ import {
     route,
 } from "@react-router/dev/routes";
 
+/**
+ * Configuración de rutas: login/protected y rutas autenticadas bajo SessionGate.
+ */
 export default [
     layout("./protected/RedirectAuthenticated.tsx", [
         route("/login", "./session/Login.tsx"),
@@ -20,6 +23,6 @@ export default [
         route("/settings", "./settings/SettingsView.tsx"),
         route("/invoices", "./imports/invoices/InvoicesView.tsx"),
         route("/media", "./media/MediaView.tsx"),
-        route("/important-files", "./media/ImportantFilesView.tsx")
+        route("/important-files", "./media/ImportantFilesView.tsx"),
     ]),
 ] satisfies RouteConfig;

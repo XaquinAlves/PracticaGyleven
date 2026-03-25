@@ -1,3 +1,6 @@
+/**
+ * Colección de mensajes de error y helpers con texto localizado para la UI.
+ */
 export const ErrorMessages = {
     invalidPageNumber: "Introduce un número de página.",
     integersOnly: "Solo se permiten enteros.",

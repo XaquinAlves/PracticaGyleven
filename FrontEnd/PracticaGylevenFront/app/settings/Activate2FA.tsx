@@ -6,6 +6,7 @@ import ErrorAlert from "~/common/ErrorAlert";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Lee la propiedad detail de una respuesta JSON y devuelve texto legible. */
 async function readDetail(response: Response) {
     try {
         const payload = await response.json();
@@ -18,6 +19,9 @@ async function readDetail(response: Response) {
     return response.statusText || "Error del servidor";
 }
 
+/**
+ * Formulario que permite confirmar un email y activar/desactivar 2FA usando TOTP.
+ */
 export default function Activate2FA() {
     const [email, setEmail] = useState("");
     const [emailError, setEmailError] = useState("");

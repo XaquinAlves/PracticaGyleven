@@ -17,6 +17,7 @@ const canUseWindow = typeof window !== "undefined";
 const MAX_CACHED_PAGES = 10;
 const NEOS_UPDATE_EVENT = "neos-update-local";
 
+/** Calcula un hash SHA-256 (o fallback) para detectar cambios en los datos. */
 async function computeNeosHash(payload: NeosResponse) {
     const serialized = JSON.stringify(payload);
     if (typeof crypto !== "undefined" && crypto.subtle?.digest) {
@@ -48,6 +49,7 @@ const NeosContext = createContext<NeosContextValue | undefined>(undefined);
 export const MIN_NEOS_PAGE = 0;
 export const MAX_NEOS_PAGE = 100;
 
+/** Limita la página solicitada al rango permitido y trunca decimales. */
 function clampPage(value: number) {
     if (Number.isNaN(value)) {
         return MIN_NEOS_PAGE;
@@ -56,6 +58,9 @@ function clampPage(value: number) {
     return Math.min(MAX_NEOS_PAGE, Math.max(MIN_NEOS_PAGE, truncated));
 }
 
+/** 
+ * Suscribe a `BroadcastChannel` o `localStorage` para recibir eventos locales de neos.
+ */
 function subscribeNeosUpdates(handler: () => void) {
     if (typeof BroadcastChannel === "function") {
         const channel = new BroadcastChannel(NEOS_UPDATE_CHANNEL);
@@ -88,6 +93,9 @@ function subscribeNeosUpdates(handler: () => void) {
 }
 
 
+/**
+ * Provider que expone los NEOS actuales, la página activa y métodos para recargar/guardar.
+ */
 export function NeosProvider({
     children,
     initialPage = 0,
@@ -102,6 +110,9 @@ export function NeosProvider({
     const cachedPagesRef = useRef<Map<number, NeosResponse>>(new Map());
     const pageZeroHashRef = useRef<string>("");
 
+    /**
+     * Descarga la página activa, mantiene caché de máximo 10 páginas y recalcula hashes.
+     */
     const loadNeos = useCallback(
         async (options?: { force?: boolean }) => {
             setLoading(true);
@@ -198,10 +209,12 @@ export function NeosProvider({
         void loadNeos();
     }, [loadNeos]);
 
+    /** Fuerza una recarga completa ignorando cache local. */
     const refresh = useCallback(async () => {
         await loadNeos({ force: true });
     }, [loadNeos]);
 
+    /** Envía los datos actuales al endpoint `/registros/neos/save/`. */
     const saveToDatabase = useCallback(async () => {
         if (!neos) {
             return;

@@ -3,10 +3,16 @@ import ApiHelper from "~/common/ApiHelper";
 import ErrorAlert from "~/common/ErrorAlert";
 import { ErrorMessages } from "~/common/messageCatalog";
 
+/**
+ * Props que permiten reaccionar al subir facturas.
+ */
 interface ReadInvoicesProps {
     onUploadSuccess?: () => void;
 }
 
+/**
+ * Formulario que permite seleccionar varios PDFs, enviarlos y mostrar mensajes.
+ */
 export default function ReadInvoices({
     onUploadSuccess,
 }: ReadInvoicesProps) {
@@ -23,6 +29,9 @@ export default function ReadInvoices({
         setErrorMessage("");
     };
 
+    /**
+     * Envía los archivos al backend para procesarlos y dispara el callback de éxito.
+     */
     const upload = async () => {
         if (!files?.length) {
             setMessage("");

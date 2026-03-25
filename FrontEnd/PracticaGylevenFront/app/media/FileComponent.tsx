@@ -5,6 +5,9 @@ import ErrorAlert from "~/common/ErrorAlert";
 import { ErrorMessages } from "~/common/messageCatalog";
 import { useFileLoader } from "~/common/useFileLoader";
 
+/**
+ * Props que describe el archivo a renderizar y las acciones disponibles.
+ */
 interface FileComponentProps {
     file: FileProps;
     important: boolean;
@@ -18,6 +21,13 @@ const PREVIEWABLE_MIME_EXACT = [
     "application/xml",
 ];
 
+/**
+ * Determina si un archivo puede abrirse en el navegador en lugar de descargarse.
+ * Usa el tipo MIME preferente y la extensión para cubrir edge cases.
+ * @param contentType - tipo MIME recibido junto al blob.
+ * @param fileName - nombre del archivo para extraer la extensión.
+ * @returns true si el archivo es renderizable inline.
+ */
 function canDisplayInline(contentType: string | null, fileName: string) {
     if (contentType) {
         if (
@@ -38,6 +48,9 @@ function canDisplayInline(contentType: string | null, fileName: string) {
         : false;
 }
 
+/**
+ * Componente de lista que permite descargar/visualizar un archivo y marcarlo como importante.
+ */
 function FileComponentBase({
     file,
     important,

@@ -3,17 +3,20 @@ import { logout, get_username } from "./session/SessionController";
 import { useEffect, useState } from "react";
 import ErrorAlert from "~/common/ErrorAlert";
 
+/**
+ * Pantalla principal que muestra el nombre del usuario y ofrece logout.
+ */
 export default function Inicio() {
     const [error, setError] = useState<string>("");
     const [username, setUsername] = useState<string>("");
 
-        useEffect(() => {
-            const obtenerUsername = async () => {
-                const username = await get_username();
-                setUsername(username);
-            };
-            obtenerUsername();
-        }, []);
+    useEffect(() => {
+        const obtenerUsername = async () => {
+            const username = await get_username();
+            setUsername(username);
+        };
+        obtenerUsername();
+    }, []);
 
     const handleLogout = async () => {
         try {
@@ -23,7 +26,6 @@ export default function Inicio() {
             setError(err instanceof Error ? err.message : String(err));
         }
     };
-
 
     return (
         <div className="row">

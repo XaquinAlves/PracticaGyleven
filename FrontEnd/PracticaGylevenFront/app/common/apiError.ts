@@ -1,3 +1,6 @@
+/**
+ * Estructura unificada usada por los handlers al parsear errores de API.
+ */
 export interface ApiErrorPayload {
     status: number;
     detail: string;
@@ -5,6 +8,9 @@ export interface ApiErrorPayload {
     errors?: Record<string, string[]>;
 }
 
+/**
+ * Extrae un mensaje legible recorriendo cadenas, arrays u objetos anidados.
+ */
 function flattenApiMessage(value: unknown): string | undefined {
     if (typeof value === "string") {
         return value;
@@ -30,6 +36,9 @@ function flattenApiMessage(value: unknown): string | undefined {
     return undefined;
 }
 
+/**
+ * Devuelve la propiedad `message` cuando está presente en un objeto.
+ */
 function formatApiObject(value: Record<string, unknown>) {
     const message =
         typeof value.message === "string" ? value.message : undefined;
@@ -39,7 +48,13 @@ function formatApiObject(value: Record<string, unknown>) {
     return undefined;
 }
 
-export async function parseApiError(response: Response): Promise<ApiErrorPayload> {
+/**
+ * Normaliza cualquier error HTTP en un payload controlado para mostrar en la UI.
+ * @param response - Response que no fue OK.
+ */
+export async function parseApiError(
+    response: Response,
+): Promise<ApiErrorPayload> {
     try {
         const payload = await response.clone().json();
         const errorsMessage = flattenApiMessage(payload.errors);

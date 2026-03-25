@@ -6,6 +6,9 @@ import { sendRecoveryEmail } from "./SessionController";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Formulario de recuperación que valida el email y llama a `sendRecoveryEmail`.
+ */
 export default function RecoverPass() {
     const [email, setEmail] = useState("");
     const [status, setStatus] = useState<{
@@ -14,6 +17,9 @@ export default function RecoverPass() {
     } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    /**
+     * Valida el email y envía la petición.
+     */
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setStatus(null);

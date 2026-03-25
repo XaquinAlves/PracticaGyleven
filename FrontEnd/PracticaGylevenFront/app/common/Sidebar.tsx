@@ -2,6 +2,9 @@ import { Link } from "react-router";
 import { logout, get_username } from "../session/SessionController";
 import { useState, useEffect } from "react";
 
+/**
+ * Barra lateral que muestra enlaces a las secciones principales y el usuario conectado.
+ */
 export default function Sidebar() {
     const [username, setUsername] = useState<string>("");
 

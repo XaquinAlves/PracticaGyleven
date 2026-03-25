@@ -5,17 +5,29 @@ import { ErrorMessages } from "~/common/messageCatalog";
 import { useMedia } from "./useMedia";
 import { publishMediaTreeUpdate } from "./mediaUpdates";
 
+/**
+ * Props del formulario de subida de media.
+ * @param onUploadSuccess - callback opcional tras una subida correcta.
+ * @param onChange - notifica cuando hay interacción del usuario (p. ej. nueva carpeta).
+ */
 interface MediaUploadFormProps {
     onUploadSuccess?: () => void;
     onChange: () => void;
 }
 
+/**
+ * Determina si el nodo pasado es un directorio para poder recorrer recursivamente.
+ */
 function isDirectory(
     entry: DirectoryProps | { type: string },
 ): entry is DirectoryProps {
     return entry.type === "directory";
 }
 
+/**
+ * Crea un listado de rutas base (carpetas) disponibles a partir del árbol.
+ * @param root - directorio raíz a partir del cual construir rutas.
+ */
 function buildDirectoryPaths(root?: DirectoryProps): string[] {
     if (!root) return [""];
 
@@ -37,6 +49,10 @@ function buildDirectoryPaths(root?: DirectoryProps): string[] {
     return Array.from(paths);
 }
 
+/**
+ * Formulario que permite crear subcarpetas y subir archivos a media.
+ * Valida el nombre de carpeta, permite múltiples archivos y publica un refresh global tras la subida.
+ */
 export default function MediaUploadForm({
     onUploadSuccess,
     onChange,

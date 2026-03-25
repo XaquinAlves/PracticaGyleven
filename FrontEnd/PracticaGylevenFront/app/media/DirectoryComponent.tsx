@@ -7,14 +7,24 @@ import { ErrorMessages } from "~/common/messageCatalog";
 import { useMedia } from "./useMedia";
 import { publishMediaTreeUpdate } from "./mediaUpdates";
 
+/**
+ * Props opcionales que permiten renderizar un sub-árbol específico.
+ */
 interface DirectoryComponentProps {
     directory?: DirectoryProps;
 }
 
+/**
+ * Genera el id de colapso de Bootstrap limpio para evitar caracteres especiales.
+ */
 function sanitizeId(value: string) {
     return value.replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
+/**
+ * Componente recursivo que muestra directorios y su contenido.
+ * Consume el contexto `useMedia` para manejar la expansión, archivos importantes y refrescos.
+ */
 function DirectoryComponentBase({
     directory,
 }: DirectoryComponentProps) {

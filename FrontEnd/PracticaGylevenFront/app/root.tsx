@@ -22,6 +22,9 @@ export const links: Route.LinksFunction = () => [
     },
 ];
 
+/**
+ * Layout raíz que agrega fonts, scripts globales y envuelve la app con `<html>`.
+ */
 export function Layout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="en">
@@ -58,6 +61,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     );
 }
 
+/** App envuelta con `AuthProvider` para mantener la sesión en toda la app. */
 export default function App() {
     return (
         <AuthProvider>
@@ -66,6 +70,9 @@ export default function App() {
     );
 }
 
+/**
+ * Boundary global que muestra errores HTTP o mensajes en desarrollo.
+ */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     let message = "Oops!";
     let details = "An unexpected error occurred.";

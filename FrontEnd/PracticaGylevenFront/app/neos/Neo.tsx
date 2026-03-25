@@ -1,6 +1,9 @@
 import { memo } from "react";
 import { type NeoItem, type NeosTableProps } from "./NeosModel";
 
+/**
+ * Fila que renderiza cada registro de NEO en la tabla principal.
+ */
 const Neo = memo(function Neo({
     id,
     name,
@@ -20,6 +23,9 @@ const Neo = memo(function Neo({
     );
 });
 
+/**
+ * Tabla que muestra la lista de NEOs y un botón para guardar en backend.
+ */
 function NeosTableBase({
     neos,
     onSave,

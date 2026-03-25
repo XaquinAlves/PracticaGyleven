@@ -25,6 +25,9 @@ const InvoicesContext = createContext<InvoicesContextValue | undefined>(
     undefined,
 );
 
+/**
+ * Contexto que expone la lista de facturas, indicadores de carga/error y un refresh forzado.
+ */
 export function InvoicesProvider({
     children,
 }: {
@@ -39,6 +42,9 @@ export function InvoicesProvider({
     const { ready, subscribe } = useSocket("/ws/media-updates/", invoicesHost);
     const invoicesHashRef = useRef(invoicesHash);
 
+    /**
+     * Carga facturas desde la API con cache local y fuerza recarga cuando llega refresh/invoices hash distinto.
+     */
     const loadInvoices = useCallback(
         async (options?: { force?: boolean }) => {
             const force = options?.force ?? false;
@@ -130,6 +136,9 @@ export function InvoicesProvider({
         void loadInvoices();
     }, [loadInvoices]);
 
+    /**
+     * Fuerza la recarga del listado ignorando la cache previa (útil para onUploadSuccess).
+     */
     const refresh = useCallback(async () => {
         await loadInvoices({ force: true });
     }, [loadInvoices]);

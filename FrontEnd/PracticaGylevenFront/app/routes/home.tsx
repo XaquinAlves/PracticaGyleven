@@ -16,10 +16,12 @@ export let username: string;
 export let error: string;
 export let pending2fa: boolean;
 
+/** Página que renderiza la vista de inicio y provee helpers para el layout. */
 export default function Home() {
     return <Inicio />;
 }
 
+/** Fuerza la carga del token CSRF necesario antes de enviar formularios. */
 export async function getCSRF() {
     try {
         await ApiHelper.refreshCSRF();
@@ -28,6 +30,10 @@ export async function getCSRF() {
     }
 }
 
+/**
+ * Comprueba la sesión actual con el endpoint de `allauth` y actualiza banderas globales.
+ * @returns `true` si la sesión está activa; `false` en caso contrario.
+ */
 export async function getSession() {
     try {
         const response = await fetch(

@@ -8,16 +8,25 @@ interface CachedEntry {
     abort: AbortController;
 }
 
+/**
+ * Hook que ofrece descarga de blobs con cache y reacciona a eventos `media` del socket.
+ */
 export function useFileLoader() {
     const cacheRef = useRef<Map<string, CachedEntry>>(new Map());
     const socketHost = new URL(ApiHelper.API_URL).host;
     const { ready, subscribe } = useSocket("/ws/media-updates/", socketHost);
 
+    /**
+     * Aborta peticiones y vacía la caché de blobs.
+     */
     const clearCache = useCallback(() => {
         cacheRef.current.forEach(({ abort }) => abort.abort());
         cacheRef.current.clear();
     }, []);
 
+    /**
+     * Recupera un archivo (o la promesa cacheada) y guarda el `AbortController` asociado.
+     */
     const getFile = useCallback((url: string) => {
         const cached = cacheRef.current.get(url);
         if (cached) {
@@ -40,6 +49,9 @@ export function useFileLoader() {
         return promise;
     }, []);
 
+    /**
+     * Responde a mensajes WebSocket `refresh` invalidando el cache cuando afecta a `media`.
+     */
     const handleSocket = useCallback(
         (data: unknown) => {
             if (typeof data !== "object" || data === null) {
