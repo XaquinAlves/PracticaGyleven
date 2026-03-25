@@ -3,6 +3,7 @@ import type { FileProps } from "./MediaModel";
 import ApiHelper from "~/common/ApiHelper";
 import ErrorAlert from "~/common/ErrorAlert";
 import { ErrorMessages } from "~/common/messageCatalog";
+import { useFileLoader } from "~/common/useFileLoader";
 
 interface FileComponentProps {
     file: FileProps;
@@ -45,6 +46,8 @@ function FileComponentBase({
     const [isFetching, setIsFetching] = useState(false);
     const [downloadError, setDownloadError] = useState("");
 
+    const { getFile } = useFileLoader();
+
     const handleFetchFile = async () => {
         setDownloadError("");
         setIsFetching(true);
@@ -52,14 +55,7 @@ function FileComponentBase({
             const url = `${ApiHelper.API_URL}/registros/media/download/?path=${encodeURIComponent(
                 file.relativePath,
             )}`;
-            const response = await fetch(url, {
-                credentials: "include",
-            });
-            if (!response.ok) {
-                throw new Error(response.statusText);
-            }
-            const blob = await response.blob();
-            const contentType = response.headers.get("Content-Type");
+            const { blob, contentType } = await getFile(url);
             const objectUrl = URL.createObjectURL(blob);
 
             if (canDisplayInline(contentType, file.name)) {
