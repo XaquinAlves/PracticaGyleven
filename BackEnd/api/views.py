@@ -30,6 +30,9 @@ def _format_error(
     code: str | None = None,
     errors: dict[str, Any] | None = None,
 ) -> JsonResponse:
+    """
+    Construye una respuesta JsonResponse con estado, detalle y metadatos opcionales.
+    """
     payload: dict[str, Any] = {
         'status': status_code,
         'detail': detail,
@@ -47,16 +50,22 @@ def _json_error(
     code: str | None = None,
     errors: dict[str, Any] | None = None,
 ) -> JsonResponse:
+    """Atajo para devolver errores JSON reutilizando el formateador común."""
     return _format_error(message, status, code=code, errors=errors)
 
 
 def get_csrf(request):
+    """Devuelve el token CSRF (cabecera X-CSRFToken) para sesiones front-end."""
     response = JsonResponse({'detail': 'CSRF cookie set'})
     response['X-CSRFToken'] = get_token(request)
     return response
 
 
 def send_totp_token_view(request):
+    """
+    Valida el JSON con usuario/contraseña, autentica y envía por email un código TOTP.
+    Usa las claves almacenadas en el .env con sufijo _TOKEN; responde errores claros.
+    """
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
