@@ -46,38 +46,53 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     const [treeVersion, setTreeVersion] = useState("");
     const [useVersionPoll, setUseVersionPoll] = useState(true);
 
+    const { ready, subscribe } = useSocket("/ws/media-updates/");
+
     //Carga el listado de directorios y ficheros del servidor
-    const loadMedia = useCallback(async () => {
-        setLoading(true);
-        setError("");
-        try {
-            //Carga el arbol de archivos y lo establece
-            const entries = await fetchMediaTree();
-            const root: DirectoryProps = {
-                name: "media",
-                type: "directory",
-                relativePath: "",
-                children: entries,
-            };
-            setDirectories(root);
-            //Carga los archivos marcados como importantes
-            const important = await fetchImportantFiles();
-            setImportantFiles(important);
-            if (useVersionPoll) {
-                const version = await fetchMediaTreeVersion();
-                setTreeVersion(version);
-            } else {
-                setTreeVersion("");
+    const directoriesRef = useRef<DirectoryProps>();
+    useEffect(() => {
+        directoriesRef.current = directories;
+    }, [directories]);
+
+    const loadMedia = useCallback(
+        async (options?: { force?: boolean }) => {
+            const force = options?.force ?? false;
+            setLoading(true);
+            setError("");
+            try {
+                if (ready && directoriesRef.current && !force) {
+                    return directoriesRef.current;
+                }
+                //Carga el arbol de archivos y lo establece
+                const entries = await fetchMediaTree();
+                const root: DirectoryProps = {
+                    name: "media",
+                    type: "directory",
+                    relativePath: "",
+                    children: entries,
+                };
+                setDirectories(root);
+                //Carga los archivos marcados como importantes
+                const important = await fetchImportantFiles();
+                setImportantFiles(important);
+                if (useVersionPoll) {
+                    const version = await fetchMediaTreeVersion();
+                    setTreeVersion(version);
+                } else {
+                    setTreeVersion("");
+                }
+                return root;
+            } catch (err) {
+                setError(
+                    err instanceof Error ? err.message : ErrorMessages.mediaError,
+                );
+                throw err;
+            } finally {
+                setLoading(false);
             }
-        } catch (err) {
-            setError(
-                err instanceof Error ? err.message : ErrorMessages.mediaError,
-            );
-            throw err;
-        } finally {
-            setLoading(false);
-        }
-    }, [useVersionPoll]);
+        },
+        [ready, useVersionPoll],
+    );
 
     useEffect(() => {
         void loadMedia();
@@ -103,7 +118,6 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         return () => clearInterval(intervalId);
     }, [loading, loadMedia, treeVersion, useVersionPoll]);
 
-    const { ready, subscribe } = useSocket("/ws/media-updates/");
     const loadMediaRef = useRef(loadMedia);
 
     useEffect(() => {

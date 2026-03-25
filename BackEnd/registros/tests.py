@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import io
 import json
 import os
 import secrets
@@ -9,6 +10,7 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
 
+import pandas as pd
 import requests
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -17,6 +19,8 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from channels.testing.live import ChannelsLiveServerTestCase
+from PyPDF2 import PdfWriter
+from registros import views
 
 
 class DownloadMediaFileTests(TestCase):
@@ -150,6 +154,31 @@ class MediaWebsocketTests(ChannelsLiveServerTestCase):
             self.fail(f"WebSocket read failed: {exc}")
         return json.loads(raw)
 
+    def _assert_refresh_event(self, ws_conn, expected_resource=None):
+        message = self._receive_json(ws_conn)
+        self.assertEqual(message.get("action"), "refresh")
+        if expected_resource:
+            self.assertEqual(message.get("resource"), expected_resource)
+        hash_value = message.get("hash")
+        self.assertIsInstance(hash_value, str)
+        return hash_value
+
+    def _create_pdf_file(self):
+        tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+        try:
+            writer = PdfWriter()
+            writer.add_blank_page(width=72, height=72)
+            with open(tmp.name, "wb") as fh:
+                writer.write(fh)
+        finally:
+            tmp.close()
+        return tmp.name
+
+    def _create_media_file(self, name="toggle.txt", content=b"important"):
+        path = self.temp_dir / name
+        path.write_bytes(content)
+        return path
+
     def _prepare_upload_payload(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".txt", delete=False)
         try:
@@ -177,6 +206,90 @@ class MediaWebsocketTests(ChannelsLiveServerTestCase):
             self.assertEqual(response.status_code, 201)
             message = self._receive_json(ws_conn)
             self.assertEqual(message.get("action"), "refresh")
+        finally:
+            ws_conn.close()
+
+    def test_upload_includes_media_hash(self):
+        ws_conn = self._open_websocket()
+        try:
+            self._receive_json(ws_conn)
+            tmp = self._prepare_upload_payload()
+            with open(tmp.name, "rb") as file_obj:
+                upload_url = f"{self.live_server_url}{reverse('media-upload')}"
+                response = self.http_session.post(
+                    upload_url,
+                    files={"files": file_obj},
+                )
+            os.remove(tmp.name)
+            self.assertEqual(response.status_code, 201)
+            media_hash = self._assert_refresh_event(ws_conn, expected_resource="media")
+            version = self.client.get(reverse("media-tree-version")).json().get("tree_version")
+            self.assertEqual(media_hash, version)
+        finally:
+            ws_conn.close()
+
+    def test_toggle_important_file_publishes_version(self):
+        ws_conn = self._open_websocket()
+        try:
+            self._receive_json(ws_conn)
+            self._create_media_file("toggle.txt")
+            payload = {"relative_path": "toggle.txt", "important": True}
+            response = self.http_session.post(
+                f"{self.live_server_url}{reverse('toggle-important-file')}",
+                json=payload,
+            )
+            self.assertEqual(response.status_code, 200)
+            media_hash = self._assert_refresh_event(ws_conn, expected_resource="media")
+            version = self.client.get(reverse("media-tree-version")).json().get("tree_version")
+            self.assertEqual(media_hash, version)
+        finally:
+            ws_conn.close()
+
+    def test_import_facturas_publishes_media_and_invoices_hash(self):
+        ws_conn = self._open_websocket()
+        try:
+            self._receive_json(ws_conn)
+            pdf_path = self._create_pdf_file()
+            with open(pdf_path, "rb") as pdf_file:
+                response = self.http_session.post(
+                    f"{self.live_server_url}{reverse('leer-facturas')}",
+                    files={"pdfs": pdf_file},
+                )
+            os.remove(pdf_path)
+            self.assertEqual(response.status_code, 200)
+            media_hash = self._assert_refresh_event(ws_conn, expected_resource="media")
+            version = views._compute_media_tree_version()
+            self.assertEqual(media_hash, version)
+            invoice_hash = self._assert_refresh_event(ws_conn, expected_resource="invoices")
+            invoice_csv = Path(settings.MEDIA_ROOT) / "invoices_by_pdf.csv"
+            self.assertTrue(invoice_csv.exists())
+            records = views._records_from_dataframe(pd.read_csv(invoice_csv))
+            self.assertEqual(invoice_hash, views._compute_records_hash(records))
+        finally:
+            ws_conn.close()
+
+    def test_save_neos_publishes_neos_hash(self):
+        ws_conn = self._open_websocket()
+        try:
+            self._receive_json(ws_conn)
+            payload = {
+                "neos": [
+                    {
+                        "id": "123",
+                        "name": "Test Neo",
+                        "estimated_diameter_km_min": 0.5,
+                        "estimated_diameter_km_max": 1.0,
+                        "is_potentially_hazardous_asteroid": False,
+                    }
+                ]
+            }
+            response = self.http_session.post(
+                f"{self.live_server_url}{reverse('save-neos')}",
+                json=payload,
+            )
+            self.assertEqual(response.status_code, 200)
+            neos_hash = self._assert_refresh_event(ws_conn, expected_resource="neos")
+            self.assertEqual(neos_hash, views.compute_hash(payload))
         finally:
             ws_conn.close()
 

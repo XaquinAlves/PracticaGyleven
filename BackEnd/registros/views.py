@@ -22,12 +22,16 @@ from channels.layers import get_channel_layer
 from datetime import timedelta
 from django.utils import timezone
 
+logger = logging.getLogger(__name__)
 # Constantes y variables
 _NEOS_CACHE_KEY = "neos_page_0"
 _NEOS_CACHE_TTL = timedelta(minutes=15)  # ajusta el tiempo que quieras
 _neos_cache: dict[str, dict[str, Any]] = {}
 _MIN_NEOS_PAGE = 0
-logger = logging.getLogger(__name__)
+_INVOICES_CACHE_TTL = timedelta(minutes=5)
+_invoices_cache: dict[str, Any] = {}
+_MEDIA_STRUCTURE_CACHE_TTL = timedelta(minutes=2)
+_media_structure_cache: dict[str, Any] = {}
 class NeosResponse(TypedDict):
     neos: list[dict[str, Any]]
 
@@ -86,7 +90,25 @@ def _extract_invoice_metadata(text: str) -> dict[str, str | None]:
     }
 
 # Guarda una factura en media/invoices_by_pdf.csv
-def _persist_invoices(df: pd.DataFrame):
+def _records_from_dataframe(df: pd.DataFrame) -> list[dict[str, Any]]:
+    df = df.where(pd.notnull(df))
+    raw_records = df.to_dict(orient="records")
+    result: list[dict[str, Any]] = []
+    for rec in raw_records:
+        normalized: dict[str, Any] = {}
+        for key, value in rec.items():
+            normalized_key = str(key)
+            normalized[normalized_key] = None if pd.isna(value) else value
+        result.append(normalized)
+    return result
+
+
+def _compute_records_hash(records: list[dict[str, Any]]) -> str:
+    serialized = json.dumps(records, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _persist_invoices(df: pd.DataFrame) -> list[dict[str, Any]]:
     os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
     invoices_path = os.path.join(settings.MEDIA_ROOT, "invoices_by_pdf.csv")
     try:
@@ -103,6 +125,29 @@ def _persist_invoices(df: pd.DataFrame):
         combined = df
     combined.to_csv(invoices_path, index=False)
     logger.info("Invoices table persisted at %s (%d rows)", invoices_path, len(combined))
+    _invalidate_invoices_cache()
+    return _records_from_dataframe(combined)
+
+
+def _get_cached_invoices() -> list[dict[str, Any]] | None:
+    entry = _invoices_cache.get("entry")
+    if not entry:
+        return None
+    if entry["expires_at"] <= timezone.now():
+        _invoices_cache.pop("entry", None)
+        return None
+    return cast(list[dict[str, Any]], entry["records"])
+
+
+def _set_invoices_cache(records: list[dict[str, Any]]) -> None:
+    _invoices_cache["entry"] = {
+        "records": records,
+        "expires_at": timezone.now() + _INVOICES_CACHE_TTL,
+    }
+
+
+def _invalidate_invoices_cache() -> None:
+    _invoices_cache.pop("entry", None)
 
 # Sube el pdf de la factura a Media/Facturas/{archivo.pdf}
 def _save_pdf_to_facturas(uploaded_file, destination_root: str) -> str:
@@ -247,6 +292,28 @@ def _persist_important_records(df: pd.DataFrame):
     df.to_csv(_important_files_csv_path(), index=False)
 
 
+def _get_cached_media_structure() -> tuple[list[dict[str, Any]], str] | None:
+    entry = _media_structure_cache.get("entry")
+    if not entry:
+        return None
+    if entry["expires_at"] <= timezone.now():
+        _media_structure_cache.pop("entry", None)
+        return None
+    return cast(tuple[list[dict[str, Any]], str], (entry["tree"], entry["version"]))
+
+
+def _set_media_structure_cache(tree: list[dict[str, Any]], version: str) -> None:
+    _media_structure_cache["entry"] = {
+        "tree": tree,
+        "version": version,
+        "expires_at": timezone.now() + _MEDIA_STRUCTURE_CACHE_TTL,
+    }
+
+
+def _invalidate_media_structure_cache() -> None:
+    _media_structure_cache.pop("entry", None)
+
+
 def _is_previewable_mime(mime_type: str | None) -> bool:
     if not mime_type:
         return False
@@ -284,22 +351,12 @@ def _invalidate_neos_cache() -> None:
 # Public Views
 
 
-def publish_neos_update():
-    channel_layer = get_channel_layer()
-    if not channel_layer:
-        return
+def publish_neos_update(hash_value: str | None = None) -> None:
     payload = {
         "action": "refresh",
-        "resource": "neos",
         "timestamp": datetime.utcnow().isoformat(),
     }
-    async_to_sync(channel_layer.group_send)(
-        "media-tree",
-        {
-            "type": "media.update",
-            "data": payload,
-        },
-    )
+    publish_media_update(payload, resource="neos", hash_value=hash_value)
 
 def fetch_from_external_api(page: int) -> NeosResponse | Response:
     api_key = os.getenv("NASA_API_KEY")
@@ -352,6 +409,8 @@ def fetch_from_external_api(page: int) -> NeosResponse | Response:
         )
 
 def get_neos_by_page(request, page: int):
+    previous_entry: tuple[NeosResponse, str] | None = None
+    cached_entry: tuple[NeosResponse, str] | None = None
     if page == _MIN_NEOS_PAGE:
         cached_entry = _get_cached_neos()
         if cached_entry:
@@ -369,8 +428,11 @@ def get_neos_by_page(request, page: int):
         return response
 
     if page == _MIN_NEOS_PAGE:
+        previous_entry = cached_entry
         response_hash = compute_hash(response)
         _set_cached_neos(response, response_hash)
+        if previous_entry is None or response_hash != previous_entry[1]:
+            publish_neos_update(response_hash)
 
     return JsonResponse({"neos": response["neos"], "cached": False})
 
@@ -403,12 +465,19 @@ def save_neos(request):
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             code="NEO_SAVE_FAILED",
         )
+    _invalidate_neos_cache()
+    payload_hash = compute_hash({"neos": neos_data})
+    publish_neos_update(payload_hash)
     return JsonResponse({"detail": "NEOs saved successfully."})
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def list_facturas(request):
+    cached = _get_cached_invoices()
+    if cached is not None:
+        return Response(cached)
+
     invoices_path = os.path.join(settings.MEDIA_ROOT, "invoices_by_pdf.csv")
     if not os.path.exists(invoices_path):
         logger.warning("Invoices CSV %s not found", invoices_path)
@@ -422,14 +491,8 @@ def list_facturas(request):
             )
         df["total"] = df.get("total")
         df = df.where(pd.notnull(df))
-        raw_records = df.to_dict(orient="records")
-        records = []
-        for rec in raw_records:
-            cleaned = {
-                key: (None if pd.isna(value) else value)
-                for key, value in rec.items()
-            }
-            records.append(cleaned)
+        records = _records_from_dataframe(df)
+        _set_invoices_cache(records)
         return Response(records)
     except Exception as exc:
         logger.error("Failed to read invoices CSV %s: %s", invoices_path, exc)
@@ -440,22 +503,30 @@ def list_facturas(request):
         )
 
 
-def publish_media_update(payload):
+def publish_media_update(
+    payload: dict[str, Any],
+    resource: str = "media",
+    hash_value: str | None = None,
+) -> None:
     channel_layer = get_channel_layer()
     if not channel_layer:
         logger.warning("No se pudo notificar media-tree: channel layer no disponible")
         return
+    payload_data = dict(payload)
+    payload_data["resource"] = resource
+    if hash_value:
+        payload_data["hash"] = hash_value
     logger.info(
         "Publishing via channel layer %s (%s) payload=%s",
         channel_layer.__class__.__name__,
         id(channel_layer),
-        payload,
+        payload_data,
     )
     async_to_sync(channel_layer.group_send)(
         "media-tree",
         {
             "type": "media.update",
-            "data": payload,
+            "data": payload_data,
         },
     )
 
@@ -568,13 +639,19 @@ def upload_to_media(request):
             len(saved_items),
             target_dir or "media root",
         )
+        _invalidate_media_structure_cache()
+        media_version = _compute_media_tree_version()
         payload = {
             "action": "refresh",
             "uploaded": len(saved_items),
             "target_dir": target_dir or "",
             "timestamp": datetime.utcnow().isoformat(),
         }
-        publish_media_update(payload)
+        publish_media_update(
+            payload,
+            resource="media",
+            hash_value=media_version,
+        )
         return Response(saved_items, status=status.HTTP_201_CREATED)
     except Exception as exc:
         logger.exception("Failed to upload media files: %s", exc)
@@ -638,16 +715,35 @@ def leer_factura_pdf(request):
                 )
 
         successful_invoices = [row for row in invoice_rows if "error" not in row]
+        invoice_records: list[dict[str, Any]] = []
         if successful_invoices:
             invoice_df = pd.DataFrame(successful_invoices)
-            _persist_invoices(invoice_df)
+            invoice_records = _persist_invoices(invoice_df)
+        _invalidate_media_structure_cache()
+        media_version = _compute_media_tree_version()
+        timestamp = datetime.utcnow().isoformat()
         payload = {
             "action": "refresh",
             "uploaded": len(invoice_rows),
             "target_dir": "/Facturas/",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": timestamp,
         }
-        publish_media_update(payload)
+        publish_media_update(
+            payload,
+            resource="media",
+            hash_value=media_version,
+        )
+        if invoice_records:
+            invoice_hash = _compute_records_hash(invoice_records)
+            publish_media_update(
+                {
+                    "action": "refresh",
+                    "uploaded": len(successful_invoices),
+                    "timestamp": timestamp,
+                },
+                resource="invoices",
+                hash_value=invoice_hash,
+            )
         return Response(invoice_rows)
     except Exception as exc:
         logger.exception("Failed to process invoices: %s", exc)
@@ -664,7 +760,14 @@ def list_media_structure(request):
     if not media_root.exists():
         return Response([], status=status.HTTP_200_OK)
     try:
+        cached = _get_cached_media_structure()
+        if cached is not None:
+            tree, _ = cached
+            return Response(tree)
+
         tree = _build_media_tree(media_root)
+        version = _compute_media_tree_version()
+        _set_media_structure_cache(tree, version)
         return Response(tree)
     except Exception as exc:
         logger.exception("Failed to build media structure: %s", exc)
@@ -679,6 +782,10 @@ def list_media_structure(request):
 @permission_classes([IsAuthenticated])
 def media_tree_version(request):
     try:
+        cached = _get_cached_media_structure()
+        if cached is not None:
+            _, version = cached
+            return Response({"tree_version": version})
         version = _compute_media_tree_version()
         return Response({"tree_version": version})
     except Exception as exc:
@@ -857,8 +964,14 @@ def toggle_important_file(request):
             "is_important": important_bool,
             "timestamp": datetime.utcnow().isoformat(),
         }
-        publish_media_update(payload)
         _persist_important_records(df)
+        _invalidate_media_structure_cache()
+        media_version = _compute_media_tree_version()
+        publish_media_update(
+            payload,
+            resource="media",
+            hash_value=media_version,
+        )
         return Response(
             {
                 "relative_path": sanitized_path,
