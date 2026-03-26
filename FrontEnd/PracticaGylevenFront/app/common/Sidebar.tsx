@@ -1,12 +1,13 @@
 import { Link } from "react-router";
-import { logout, get_username } from "../session/SessionController";
+import { get_username } from "../session/SessionController";
 import { useState, useEffect } from "react";
-
+import { useSessionActions } from "../session/auth";
 /**
  * Barra lateral que muestra enlaces a las secciones principales y el usuario conectado.
  */
 export default function Sidebar() {
     const [username, setUsername] = useState<string>("");
+    const { logout } = useSessionActions();
 
     useEffect(() => {
         const obtenerUsername = async () => {
@@ -15,6 +16,13 @@ export default function Sidebar() {
         };
         obtenerUsername();
     }, []);
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+        } catch (err) {
+        }
+    };
 
     return (
         <div
@@ -109,7 +117,10 @@ export default function Sidebar() {
                         <hr className="dropdown-divider" />
                     </li>
                     <li>
-                        <button className="dropdown-item" onClick={logout}>
+                        <button
+                            className="dropdown-item"
+                            onClick={handleLogout}
+                        >
                             Cerrar sesión
                         </button>
                     </li>

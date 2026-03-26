@@ -1,7 +1,7 @@
 import type React from "react";
 import { useState } from "react";
 import ErrorAlert from "~/common/ErrorAlert";
-import { login2fa } from "./SessionController";
+import { useSessionActions } from "./auth";
 
 const CODE_REGEX = /^\d{6}$/;
 
@@ -14,6 +14,7 @@ export default function Login2FA() {
         type: "error" | "success";
         message: string;
     } | null>(null);
+    const { login2fa } = useSessionActions();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     /** Valida el código y envía la petición de 2FA. */

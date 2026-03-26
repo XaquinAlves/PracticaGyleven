@@ -1,8 +1,9 @@
-import { Link, useNavigate } from "react-router";
-import { login, loginGoogle } from "./SessionController";
+import { Link } from "react-router";
+import { loginGoogle } from "./SessionController";
 import { useState, type FormEvent } from "react";
 import { ErrorMessages } from "~/common/messageCatalog";
 import ErrorAlert from "~/common/ErrorAlert";
+import { useSessionActions } from "./auth";
 let username = "";
 let password = "";
 
@@ -10,13 +11,14 @@ let password = "";
  * Pantalla de login que actualiza los valores globales y llama a `login` al enviar.
  */
 export default function Login() {
-    const navigate = useNavigate();
     const [error, setError] = useState<string>("");
+    const { login } = useSessionActions();
+
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         try {
             setError("");
-            await login(event, username, password, navigate);
+            await login(event, username, password);
         } catch (err) {
             setError(
                 err instanceof Error

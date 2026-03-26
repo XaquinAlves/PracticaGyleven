@@ -1,5 +1,6 @@
 import Sidebar from "./common/Sidebar";
-import { logout, get_username } from "./session/SessionController";
+import { get_username } from "./session/SessionController";
+import { useSessionActions } from "./session/auth";
 import { useEffect, useState } from "react";
 import ErrorAlert from "~/common/ErrorAlert";
 
@@ -9,6 +10,7 @@ import ErrorAlert from "~/common/ErrorAlert";
 export default function Inicio() {
     const [error, setError] = useState<string>("");
     const [username, setUsername] = useState<string>("");
+    const { logout } = useSessionActions();
 
     useEffect(() => {
         const obtenerUsername = async () => {

@@ -1,5 +1,6 @@
 import {
     type ReactNode,
+    type FormEvent,
     createContext,
     useCallback,
     useContext,
@@ -9,6 +10,11 @@ import {
 } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { getSession } from "~/routes/home";
+import {
+    login as sessionLogin,
+    login2fa as sessionLogin2fa,
+    logout as sessionLogout,
+} from "./SessionController";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
@@ -115,5 +121,35 @@ export function useRequireNoAuth({
         status,
         isLoading: status === "loading",
         isAuthenticated: status === "authenticated",
+    };
+}
+
+/**
+ * Hook auxiliar que enlaza `useAuth` con los controladores de sesión.
+ */
+export function useSessionActions() {
+    const { refresh } = useAuth();
+    const navigate = useNavigate();
+
+    const login = useCallback(
+        (event: FormEvent<HTMLFormElement>, username: string, password: string) =>
+            sessionLogin(event, username, password, navigate, refresh),
+        [navigate, refresh],
+    );
+
+    const login2fa = useCallback(
+        (event: FormEvent<HTMLFormElement>, code: string) =>
+            sessionLogin2fa(event, code, navigate, refresh),
+        [navigate, refresh],
+    );
+
+    const logout = useCallback(() => {
+        return sessionLogout(navigate, refresh);
+    }, [navigate, refresh]);
+
+    return {
+        login,
+        login2fa,
+        logout,
     };
 }

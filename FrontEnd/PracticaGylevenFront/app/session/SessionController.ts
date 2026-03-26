@@ -51,7 +51,9 @@ function mapSessionApiError(payload: ApiErrorPayload, fallback: string) {
     if (!payload) {
         return fallback;
     }
-    const mapped = payload.code ? sessionErrorMessages[payload.code] : undefined;
+    const mapped = payload.code
+        ? sessionErrorMessages[payload.code]
+        : undefined;
     return mapped || payload.detail || fallback;
 }
 
@@ -190,14 +192,13 @@ export async function resetPass(
  * @param event - evento submit del formulario.
  * @param username - nombre de usuario.
  * @param password - contraseña.
- * @param navigate - función de navegación para redirigir al flujo de 2FA.
- * @remarks Publica el estado de sesión y recarga la página al iniciar correctamente.
  */
 export async function login(
     event: React.FormEvent<HTMLFormElement>,
     username: string,
     password: string,
     navigate: NavigateFunction,
+    refresh: () => Promise<void>
 ) {
     event.preventDefault();
     await ApiHelper.ensureCSRF();
@@ -214,20 +215,16 @@ export async function login(
         },
     );
 
-    if (response.status >= 200 && response.status <= 299) {
-        await response.json();
-        getSession();
-        window.location.reload();
-        return;
-    }
-
     if (response.status === 401) {
-        const data =
-            (await response
-                .clone()
-                .json()
-                .catch(() => undefined)) as
-            | { data?: { flows?: Array<{ id: string; is_pending?: boolean }> } }
+        const data = (await response
+            .clone()
+            .json()
+            .catch(() => undefined)) as
+            | {
+                  data?: {
+                      flows?: Array<{ id: string; is_pending?: boolean }>;
+                  };
+              }
             | undefined;
         const mfaFlow = data?.data?.flows?.find(
             (element: { id: string; is_pending?: boolean }) =>
@@ -249,7 +246,13 @@ export async function login(
         }
     }
 
-    await throwSessionApiError(response, ErrorMessages.invalidCredentials);
+    if (!response.ok) {
+        await throwSessionApiError(response, ErrorMessages.invalidCredentials);
+    }
+
+    await response.json();
+    await refresh();
+    navigate?.("/inicio", { replace: true });
 }
 
 /**
@@ -260,6 +263,8 @@ export async function login(
 export async function login2fa(
     event: React.FormEvent<HTMLFormElement>,
     code: string,
+    navigate: NavigateFunction,
+    refresh: () => Promise<void>
 ) {
     event.preventDefault();
     await ApiHelper.ensureCSRF();
@@ -278,14 +283,17 @@ export async function login2fa(
         await throwSessionApiError(response, ErrorMessages.twoFaError);
     }
     await response.json();
-    getSession();
-    window.location.reload();
+    await refresh();
+    navigate?.("/inicio", { replace: true });
 }
 
 /**
  * Cierra sesión eliminando los datos del CSRF cookie y notificando al servidor.
  */
-export async function logout() {
+export async function logout(
+    navigate: NavigateFunction,
+    refresh: () => Promise<void>,
+) {
     await ApiHelper.ensureCSRF();
     const response = await fetch(
         ApiHelper.API_URL + "/_allauth/browser/v1/auth/session",
@@ -296,13 +304,15 @@ export async function logout() {
         },
     );
     if (response.status === 401) {
-        getSession();
-        window.location.reload();
+        await refresh();
+        navigate?.("/login", { replace: true });
         return;
     }
     if (!response.ok) {
         await throwSessionApiError(response, ErrorMessages.logoutError);
     }
+    await refresh();
+    navigate?.("/login", { replace: true });
 }
 
 /**

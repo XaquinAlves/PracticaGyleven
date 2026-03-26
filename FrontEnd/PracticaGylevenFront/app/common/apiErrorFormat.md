@@ -7,7 +7,7 @@ Todas las respuestas erróneas que consume el frontend siguen este esquema para 
 - **code** *(string, opcional)*: identificador lógico (p.ej. NEO_FETCH_FAILED) que usa el backend o la API para agrupar errores.
 - **errors** *(objeto, opcional)*: lista de errores por campo ({ fieldName: [ mensaje, ...] }), útil para formularios validados.
 
-El helper parseApiError en pp/common/apiError.ts encapsula la lógica de parseo; lo importan los servicios (MediaModel, InvoicesModel, NeosModel, etc.) antes de lanzar el Error en cada fetch.
+El helper parseApiError en app/common/apiError.ts encapsula la lógica de parseo; lo importan los servicios (MediaModel, InvoicesModel, NeosModel, etc.) antes de lanzar el Error en cada fetch.
 
 ## Códigos de error del backend de sesión
 
