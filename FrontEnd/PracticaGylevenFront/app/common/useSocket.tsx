@@ -99,6 +99,9 @@ export function useSocket(
     /**
      * Establece el efecto que abre la conexión y se cierra al desmontar.
      */
+    /**
+     * Abre la conexión WebSocket al montar (y la cierra/limpia al desmontar o cambiar URL).
+     */
     useEffect(() => {
         if (!canUseWindow || !url) {
             return () => undefined;

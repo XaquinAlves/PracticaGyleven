@@ -77,14 +77,23 @@ export function InvoicesProvider({
 
     const loadInvoicesRef = useRef(loadInvoices);
 
+    /**
+     * Actualiza el ref con la función `loadInvoices` más reciente para llamadas posteriores.
+     */
     useEffect(() => {
         loadInvoicesRef.current = loadInvoices;
     }, [loadInvoices]);
 
+    /**
+     * Guarda el hash recibido en un ref para evitar recargas redundantes.
+     */
     useEffect(() => {
         invoicesHashRef.current = invoicesHash;
     }, [invoicesHash]);
 
+    /**
+     * Se suscribe al socket de media para recargar facturas cuando el backend emite `refresh`.
+     */
     useEffect(() => {
         const unsubscribe = subscribe((data) => {
             if (typeof data !== "object" || data === null) {
@@ -119,6 +128,9 @@ export function InvoicesProvider({
         return unsubscribe;
     }, [subscribe]);
 
+    /**
+     * Usa el fallback de `subscribeMediaTreeUpdates` cuando el socket aún no está listo.
+     */
     useEffect(() => {
         if (ready) {
             return () => undefined;
@@ -132,6 +144,9 @@ export function InvoicesProvider({
         return unsubscribe;
     }, [ready, loading]);
 
+    /**
+     * Dispara la carga inicial de facturas al montar el provider.
+     */
     useEffect(() => {
         void loadInvoices();
     }, [loadInvoices]);

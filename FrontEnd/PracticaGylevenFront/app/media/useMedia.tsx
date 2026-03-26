@@ -60,6 +60,10 @@ export function MediaProvider({ children }: { children: ReactNode }) {
 
     //Carga el listado de directorios y ficheros del servidor
     const directoriesRef = useRef<DirectoryProps | undefined>(undefined);
+    /**
+     * Mantiene el ref de directorios sincronizado para poder reutilizar
+     * el mismo árbol dentro de callbacks asíncronos sin causar renders.
+     */
     useEffect(() => {
         directoriesRef.current = directories;
     }, [directories]);
@@ -109,10 +113,17 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         [ready, useVersionPoll],
     );
 
+    /**
+     * Lanza la carga inicial del árbol al montar o cuando cambia `loadMedia`.
+     */
     useEffect(() => {
         void loadMedia();
     }, [loadMedia]);
     //Compara versiones periódicamente con el hash, 15000ms de intervalo
+    /**
+     * Sondea periódicamente la versión del árbol cuando la
+     * comparación por hash está activa; evita la recarga si ya se está cargando.
+     */
     useEffect(() => {
         if (!useVersionPoll) {
             return;
@@ -136,14 +147,23 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     const loadMediaRef = useRef(loadMedia);
     const mediaHashRef = useRef(mediaHash);
 
+    /**
+     * Actualiza el ref con la función `loadMedia` más reciente para usarla desde callbacks.
+     */
     useEffect(() => {
         loadMediaRef.current = loadMedia;
     }, [loadMedia]);
 
+    /**
+     * Guarda el hash actual en un ref para compararlo sin depender del estado.
+     */
     useEffect(() => {
         mediaHashRef.current = mediaHash;
     }, [mediaHash]);
 
+    /**
+     * Se suscribe al socket de media y fuerza refrescos cuando llegan eventos relevantes.
+     */
     useEffect(() => {
         const unsubscribe = subscribe((data) => {
             if (loading) {
@@ -173,10 +193,16 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         return unsubscribe;
     }, [loading, subscribe]);
 
+    /**
+     * Activa la comprobación por hash solo cuando el socket todavía no está listo.
+     */
     useEffect(() => {
         setUseVersionPoll(!ready);
     }, [ready]);
 
+    /**
+     * Suscribe el polling legado cuando el socket aún no informa estar listo.
+     */
     useEffect(() => {
         if (ready) {
             return () => undefined;

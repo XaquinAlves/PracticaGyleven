@@ -68,11 +68,17 @@ export function useFileLoader() {
         [clearCache],
     );
 
+    /**
+     * Reacciona a eventos del socket invalidando la cache cuando llega un `refresh`.
+     */
     useEffect(() => {
         const unsubscribeSocket = subscribe(handleSocket);
         return () => unsubscribeSocket();
     }, [handleSocket, subscribe]);
 
+    /**
+     * Usa el fallback `subscribeMediaTreeUpdates` mientras el socket no está listo.
+     */
     useEffect(() => {
         if (!ready) {
             const unsubscribe = subscribeMediaTreeUpdates(() => {

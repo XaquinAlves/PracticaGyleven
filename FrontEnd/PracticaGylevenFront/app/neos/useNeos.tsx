@@ -168,10 +168,16 @@ export function NeosProvider({
     const neosHost = new URL(ApiHelper.API_URL).host;
     const { subscribe: subscribeSocket } = useSocket("/ws/media-updates/", neosHost);
 
+    /**
+     * Mantiene el ref apuntando a la versión más reciente de `loadNeos` para invocaciones externas.
+     */
     useEffect(() => {
         loadNeosRef.current = loadNeos;
     }, [loadNeos]);
 
+    /**
+     * Escucha eventos locales (BroadcastChannel / storage) que piden refrescar los datos.
+     */
     useEffect(() => {
         const unsubscribe = subscribeNeosUpdates(() => {
             void loadNeosRef.current?.({ force: true });
@@ -179,10 +185,16 @@ export function NeosProvider({
         return unsubscribe;
     }, []);
 
+    /**
+     * Guarda el hash calculado para evitar recargas cuando no hay cambios reales.
+     */
     useEffect(() => {
         neosHashRef.current = neosHash;
     }, [neosHash]);
 
+    /**
+     * Se suscribe al socket para forzar recargas cuando el backend indica que cambió el hash.
+     */
     useEffect(() => {
         const unsubscribe = subscribeSocket((data) => {
             if (typeof data === "object" && data !== null) {
@@ -205,6 +217,9 @@ export function NeosProvider({
         return unsubscribe;
     }, [subscribeSocket]);
 
+    /**
+     * Dispara la carga inicial de la página actual cuando el provider se monta.
+     */
     useEffect(() => {
         void loadNeos();
     }, [loadNeos]);
