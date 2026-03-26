@@ -34,7 +34,12 @@ export async function getCSRF() {
  * Comprueba la sesión actual con el endpoint de `allauth` y actualiza banderas globales.
  * @returns `true` si la sesión está activa; `false` en caso contrario.
  */
-export async function getSession() {
+export type SessionInfo = {
+    authenticated: boolean;
+    username: string;
+};
+
+export async function getSession(): Promise<SessionInfo> {
     try {
         const response = await fetch(
             ApiHelper.API_URL + "/_allauth/browser/v1/auth/session",
@@ -43,16 +48,51 @@ export async function getSession() {
             },
         );
         if (response.ok) {
+            const payload = (await response.json()) as {
+                data?: {
+                    user?: {
+                        username?: string;
+                    };
+                    token?: string;
+                    flows?: Array<{ id: string; is_pending?: boolean }>;
+                };
+            };
             isAuthenticated = true;
-            return true;
+            username =
+                payload?.data?.user?.username ??
+                "";
+            token = payload?.data?.token ?? "";
+            pending2fa =
+                payload?.data?.flows?.some(
+                    (flow) =>
+                        flow.id === "mfa_authenticate" &&
+                        flow.is_pending,
+                ) ?? false;
+            return {
+                authenticated: true,
+                username,
+            };
         } else {
             isAuthenticated = false;
+            username = "";
+            token = "";
+            pending2fa = false;
             getCSRF();
-            return false;
+            return {
+                authenticated: false,
+                username: "",
+            };
         }
     } catch (err) {
         console.error(err);
         alert(ErrorMessages.sessionCheckFailed);
-        return false;
+        isAuthenticated = false;
+        username = "";
+        token = "";
+        pending2fa = false;
+        return {
+            authenticated: false,
+            username: "",
+        };
     }
 }

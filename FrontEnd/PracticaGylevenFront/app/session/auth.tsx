@@ -22,6 +22,7 @@ type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 type AuthContextValue = {
     status: AuthStatus;
     refresh: () => Promise<void>;
+    currentUser: string;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -29,14 +30,19 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 /** Provee el estado global de autenticación y permite refrescar el token. */
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [status, setStatus] = useState<AuthStatus>("loading");
+    const [currentUser, setCurrentUser] = useState<string>("");
 
     const refresh = useCallback(async () => {
         try {
-            const authenticated = await getSession();
-            setStatus(authenticated ? "authenticated" : "unauthenticated");
+            const session = await getSession();
+            setStatus(
+                session.authenticated ? "authenticated" : "unauthenticated",
+            );
+            setCurrentUser(session.username ?? "");
         } catch (error) {
             console.error("Failed to refresh session", error);
             setStatus("unauthenticated");
+            setCurrentUser("");
         }
     }, []);
 
@@ -48,8 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         () => ({
             status,
             refresh,
+            currentUser,
         }),
-        [refresh, status],
+        [refresh, status, currentUser],
     );
 
     return (

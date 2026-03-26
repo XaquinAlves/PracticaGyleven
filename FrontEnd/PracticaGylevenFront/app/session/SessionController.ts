@@ -1,6 +1,5 @@
 import type React from "react";
 import type { NavigateFunction } from "react-router";
-import { getSession } from "~/routes/home";
 import ApiHelper from "~/common/ApiHelper";
 import { ErrorMessages } from "~/common/messageCatalog";
 import { type ApiErrorPayload, parseApiError } from "~/common/apiError";
@@ -65,31 +64,6 @@ function mapSessionApiError(payload: ApiErrorPayload, fallback: string) {
 async function throwSessionApiError(response: Response, fallback: string) {
     const payload = await parseApiError(response);
     throw new Error(mapSessionApiError(payload, fallback));
-}
-
-/**
- * Recupera el nombre de usuario almacenado en la sesión actual haciendo `GET` a la API.
- * Devuelve cadena vacía si la sesión no existe o ocurre un error.
- */
-export async function get_username() {
-    try {
-        const response = await fetch(
-            ApiHelper.API_URL + "/_allauth/browser/v1/auth/session",
-            {
-                headers: ApiHelper.getJsonHeaders(false),
-                credentials: "include",
-            },
-        );
-        if (response.ok) {
-            const data = await response.json();
-            return data.data.user.username;
-        } else {
-            return "";
-        }
-    } catch (err) {
-        console.error(err);
-        return "";
-    }
 }
 
 /**
@@ -251,6 +225,7 @@ export async function login(
     }
 
     await response.json();
+    await ApiHelper.refreshCSRF();
     await refresh();
     navigate?.("/inicio", { replace: true });
 }
@@ -283,6 +258,7 @@ export async function login2fa(
         await throwSessionApiError(response, ErrorMessages.twoFaError);
     }
     await response.json();
+    await ApiHelper.refreshCSRF();
     await refresh();
     navigate?.("/inicio", { replace: true });
 }
