@@ -279,3 +279,11 @@ LOGGING = {
         "level": "INFO",
     },
 }
+
+# TOTP secrets cargadas desde las variables de entorno con sufijo `_TOKEN`.
+TOTP_TOKEN_SUFFIX = "_TOKEN"
+TOTP_SECRETS = {
+    name[: -len(TOTP_TOKEN_SUFFIX)].upper(): value
+    for name, value in os.environ.items()
+    if name.upper().endswith(TOTP_TOKEN_SUFFIX) and value
+}

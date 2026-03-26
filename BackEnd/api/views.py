@@ -1,19 +1,12 @@
 import json
-import os
-from pathlib import Path
 from typing import Any
 
-import environ
 import pyotp
+from django.conf import settings
 from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
-
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-env = environ.Env()
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 
 ERROR_INVALID_JSON = 'INVALID_JSON_PAYLOAD'
@@ -87,10 +80,8 @@ def send_totp_token_view(request):
             code=ERROR_INVALID_CREDENTIALS,
         )
 
-    varname = username.upper() + '_TOKEN'
-    try:
-        secret = env(varname)
-    except Exception:
+    secret = settings.TOTP_SECRETS.get(username.upper())
+    if not secret:
         return _json_error(
             'Falta el token TOTP en la configuración.',
             status=500,
