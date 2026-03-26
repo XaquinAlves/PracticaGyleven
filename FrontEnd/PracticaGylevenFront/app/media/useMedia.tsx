@@ -19,6 +19,7 @@ import { subscribeMediaTreeUpdates } from "./mediaUpdates";
 import { ErrorMessages } from "~/common/messageCatalog";
 import ApiHelper from "~/common/ApiHelper";
 import { useSocket } from "~/common/useSocket";
+import { registerSessionReset } from "~/session/sessionReset";
 
 interface MediaContextValue {
     directories?: DirectoryProps;
@@ -28,6 +29,7 @@ interface MediaContextValue {
     refresh: () => Promise<void>;
     toggleDirectory: (relativePath: string) => void;
     isDirectoryExpanded: (relativePath: string) => boolean;
+    reset: () => void;
 }
 
 function normalizeRelativePath(relativePath?: string) {
@@ -243,6 +245,18 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         await loadMedia({ force: true });
     }, [loadMedia]);
 
+    const resetMedia = useCallback(() => {
+        directoriesRef.current = undefined;
+        setDirectories(undefined);
+        setImportantFiles([]);
+        setExpandedDirectories([]);
+        setTreeVersion("");
+        setMediaHash("");
+        setUseVersionPoll(true);
+        setLoading(false);
+        setError("");
+    }, []);
+
     const value = useMemo(
         () => ({
             directories,
@@ -252,6 +266,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
             refresh,
             toggleDirectory,
             isDirectoryExpanded,
+            reset: resetMedia,
         }),
         [
             directories,
@@ -261,8 +276,11 @@ export function MediaProvider({ children }: { children: ReactNode }) {
             refresh,
             toggleDirectory,
             isDirectoryExpanded,
+            resetMedia,
         ],
     );
+
+    useEffect(() => registerSessionReset(resetMedia), [resetMedia]);
 
     return (
         <MediaContext.Provider value={value}>{children}</MediaContext.Provider>

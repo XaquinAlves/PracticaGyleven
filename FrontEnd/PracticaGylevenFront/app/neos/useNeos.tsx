@@ -11,6 +11,7 @@ import {
 import { type NeosResponse, fetchNeos, saveNeos } from "./NeosModel";
 import ApiHelper from "~/common/ApiHelper";
 import { useSocket } from "~/common/useSocket";
+import { registerSessionReset } from "~/session/sessionReset";
 
 const NEOS_UPDATE_CHANNEL = "neos-updates";
 const canUseWindow = typeof window !== "undefined";
@@ -42,6 +43,7 @@ export interface NeosContextValue {
     setPage: (value: number) => void;
     refresh: () => Promise<void>;
     saveToDatabase: () => Promise<void>;
+    reset: () => void;
 }
 
 const NeosContext = createContext<NeosContextValue | undefined>(undefined);
@@ -241,6 +243,16 @@ export function NeosProvider({
         setPageState(clampPage(value));
     }, []);
 
+    const resetNeos = useCallback(() => {
+        cachedPagesRef.current.clear();
+        pageZeroHashRef.current = "";
+        setNeos(null);
+        setNeosHash("");
+        setError("");
+        setPageState(MIN_NEOS_PAGE);
+        setLoading(false);
+    }, []);
+
     const value = useMemo(
         () => ({
             neos,
@@ -250,9 +262,12 @@ export function NeosProvider({
             setPage,
             refresh,
             saveToDatabase,
+            reset: resetNeos,
         }),
-        [neos, loading, error, page, refresh, saveToDatabase],
+        [neos, loading, error, page, refresh, saveToDatabase, resetNeos],
     );
+
+    useEffect(() => registerSessionReset(resetNeos), [resetNeos]);
 
     return (
         <NeosContext.Provider value={value}>{children}</NeosContext.Provider>

@@ -13,12 +13,14 @@ import { ErrorMessages } from "~/common/messageCatalog";
 import ApiHelper from "~/common/ApiHelper";
 import { useSocket } from "~/common/useSocket";
 import { subscribeMediaTreeUpdates } from "~/media/mediaUpdates";// reuse broadcast fallback
+import { registerSessionReset } from "~/session/sessionReset";
 
 interface InvoicesContextValue {
     invoices: InvoiceProps[];
     loading: boolean;
     error: string;
     refresh: () => Promise<void>;
+    reset: () => void;
 }
 
 const InvoicesContext = createContext<InvoicesContextValue | undefined>(
@@ -158,15 +160,26 @@ export function InvoicesProvider({
         await loadInvoices({ force: true });
     }, [loadInvoices]);
 
+    const resetInvoices = useCallback(() => {
+        cacheRef.current = null;
+        setInvoices([]);
+        setLoading(false);
+        setError("");
+        setInvoicesHash("");
+    }, []);
+
     const value = useMemo(
         () => ({
             invoices,
             loading,
             error,
             refresh,
+            reset: resetInvoices,
         }),
-        [invoices, loading, error, refresh],
+        [invoices, loading, error, refresh, resetInvoices],
     );
+
+    useEffect(() => registerSessionReset(resetInvoices), [resetInvoices]);
 
     return (
         <InvoicesContext.Provider value={value}>{children}</InvoicesContext.Provider>

@@ -15,6 +15,7 @@ import {
     login2fa as sessionLogin2fa,
     logout as sessionLogout,
 } from "./SessionController";
+import { triggerSessionReset } from "./sessionReset";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
@@ -143,8 +144,9 @@ export function useSessionActions() {
         [navigate, refresh],
     );
 
-    const logout = useCallback(() => {
-        return sessionLogout(navigate, refresh);
+    const logout = useCallback(async () => {
+        await sessionLogout(navigate, refresh);
+        triggerSessionReset();
     }, [navigate, refresh]);
 
     return {
