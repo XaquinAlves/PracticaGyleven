@@ -66,6 +66,30 @@ async function throwSessionApiError(response: Response, fallback: string) {
     throw new Error(mapSessionApiError(payload, fallback));
 }
 
+interface SessionFetchOptions {
+    method?: string;
+    body?: Record<string, unknown>;
+    allowStatuses?: number[];
+}
+
+async function sessionFetch(
+    path: string,
+    fallback: string,
+    { method = "POST", body, allowStatuses = [] }: SessionFetchOptions = {},
+) {
+    await ApiHelper.ensureCSRF();
+    const response = await fetch(ApiHelper.API_URL + path, {
+        method,
+        headers: ApiHelper.getJsonHeaders(),
+        credentials: "include",
+        body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!response.ok && !allowStatuses.includes(response.status)) {
+        await throwSessionApiError(response, fallback);
+    }
+    return response;
+}
+
 /**
  * Cambia la contraseña del usuario logueado en el servidor.
  * @param oldPassword - contraseña actual.
@@ -85,25 +109,16 @@ export async function changePass(
     ensurePasswordStrength(newPassword);
 
     try {
-        await ApiHelper.ensureCSRF();
-        const response = await fetch(
-            ApiHelper.API_URL + "/_allauth/browser/v1/account/password/change",
+        await sessionFetch(
+            "/_allauth/browser/v1/account/password/change",
+            ErrorMessages.passwordChangeError,
             {
-                method: "POST",
-                headers: ApiHelper.getJsonHeaders(),
-                credentials: "include",
-                body: JSON.stringify({
+                body: {
                     current_password: oldPassword,
                     new_password: newPassword,
-                }),
+                },
             },
         );
-        if (!response.ok) {
-            await throwSessionApiError(
-                response,
-                ErrorMessages.passwordChangeError,
-            );
-        }
     } catch (err) {
         console.error(err);
         throw err;
@@ -131,28 +146,20 @@ export async function resetPass(
     ensurePasswordStrength(password);
 
     try {
-        await ApiHelper.ensureCSRF();
-        const response = await fetch(
-            ApiHelper.API_URL + "/_allauth/browser/v1/auth/password/reset",
+        const response = await sessionFetch(
+            "/_allauth/browser/v1/auth/password/reset",
+            ErrorMessages.passwordResetError,
             {
-                method: "POST",
-                headers: ApiHelper.getJsonHeaders(),
-                credentials: "include",
-                body: JSON.stringify({
+                body: {
                     key: key,
-                    password: password,
-                }),
+                    password,
+                },
+                allowStatuses: [401],
             },
         );
         if (response.status === 401) {
             window.location.assign("/login");
             return;
-        }
-        if (!response.ok) {
-            await throwSessionApiError(
-                response,
-                ErrorMessages.passwordResetError,
-            );
         }
         window.location.reload();
     } catch (err) {
@@ -296,21 +303,15 @@ export async function logout(
  * @param email - dirección a la que se enviará el enlace de restablecimiento.
  */
 export async function sendRecoveryEmail(email: string) {
-    await ApiHelper.ensureCSRF();
-    const response = await fetch(
-        ApiHelper.API_URL + "/_allauth/browser/v1/auth/password/request",
+    await sessionFetch(
+        "/_allauth/browser/v1/auth/password/request",
+        ErrorMessages.recoveryError,
         {
-            method: "POST",
-            headers: ApiHelper.getJsonHeaders(),
-            credentials: "include",
-            body: JSON.stringify({
+            body: {
                 email,
-            }),
+            },
         },
     );
-    if (!response.ok) {
-        await throwSessionApiError(response, ErrorMessages.recoveryError);
-    }
 }
 /**
  * Lanza el flujo de login de Google generando un formulario oculto con las credenciales necesarias.
