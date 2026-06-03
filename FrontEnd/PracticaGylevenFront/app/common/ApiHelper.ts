@@ -6,8 +6,7 @@ const DEFAULT_API_URL = "http://localhost:8000";
  * Utilidades para acceder a la API (CSRF, URL y cabeceras JSON).
  */
 export default class ApiHelper {
-    static API_URL =
-        (import.meta.env.VITE_API_URL as string | undefined) ?? DEFAULT_API_URL;
+    static API_URL = DEFAULT_API_URL;
     static CSRF = Cookies.get("csrftoken") || "";
 
     /**

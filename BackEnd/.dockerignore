@@ -1,0 +1,8 @@
+.venv
+.venv_broken_backup
+__pycache__
+*.pyc
+.git
+media
+test_media_root
+.env

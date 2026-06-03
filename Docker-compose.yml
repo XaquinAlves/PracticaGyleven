@@ -1,0 +1,57 @@
+services:
+
+  mysql:
+    image: mysql:8.4
+
+    container_name: novadesk_mysql
+
+    restart: unless-stopped
+
+    environment:
+      MYSQL_DATABASE: novadesk
+      MYSQL_USER: novadesk
+      MYSQL_PASSWORD: novadesk
+      MYSQL_ROOT_PASSWORD: root
+
+    ports:
+      - "3307:3306"
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  backend:
+    build:
+      context: ./BackEnd
+
+    container_name: novadesk_backend
+
+    restart: unless-stopped
+
+    env_file:
+      - ./BackEnd/.env
+
+    ports:
+      - "8000:8000"
+
+    depends_on:
+      - mysql
+
+    volumes:
+      - ./BackEnd:/app
+
+  frontend:
+    build:
+      context: ./FrontEnd/PracticaGylevenFront
+
+    container_name: novadesk_frontend
+
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
