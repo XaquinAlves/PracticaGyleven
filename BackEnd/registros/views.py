@@ -531,6 +531,7 @@ def fetch_from_external_api(page: int) -> NeosResponse | Response:
             code="NEO_FETCH_PAGE_FAILED",
         )
 
+@api_view(["GET"])
 def get_neos_by_page(request, page: int):
     """
     Endpoint que devuelve la página solicitada de NEOS, usa cache para page=0 y actualiza hashes.
